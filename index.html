@@ -293,7 +293,12 @@
           <label>Date de début du programme</label>
           <input type="date" id="startDateInput">
         </div>
-        <button class="btn outline" onclick="saveStartDate()">Mettre à jour la semaine en cours</button>
+        <div class="field">
+          <label>Objectif calories / jour</label>
+          <input type="number" id="calorieTargetInput" placeholder="ex : 1600">
+        </div>
+        <p class="muted" id="calorieWarning" style="display:none;color:#8a3c25;">Attention : un déficit trop important est à éviter (voir partie Diète — pas de sèche trop basse en calories).</p>
+        <button class="btn outline" onclick="saveStartDate()">Enregistrer les réglages</button>
       </div>
 
     </section>
@@ -316,6 +321,50 @@
           <p class="muted" style="margin-bottom:4px;">7 derniers jours</p>
           <div class="streak" id="dietStreak"></div>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0;">Calories &amp; protéines du jour</h3>
+          <button class="small-btn" onclick="openFoodForm()">+ Aliment</button>
+        </div>
+        <div id="calorieSummary"></div>
+        <div class="card" id="foodFormCard" style="display:none; box-shadow:none; border-style:dashed; margin-top:10px; margin-bottom:0;">
+          <div class="field">
+            <label>Aliment</label>
+            <select id="foodSelect" onchange="updateFoodPreview()"></select>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Quantité (g)</label><input type="number" id="foodGrams" oninput="updateFoodPreview()"></div>
+            <div class="field"><label>Aperçu</label><input type="text" id="foodPreview" disabled></div>
+          </div>
+          <button class="btn" onclick="addFoodEntry()">Ajouter</button>
+          <button class="btn outline" style="margin-top:8px;" onclick="closeFoodForm()">Annuler</button>
+        </div>
+        <div id="foodLog" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0;">Journal repas (photo)</h3>
+          <button class="small-btn" onclick="openMealForm()">+ Repas</button>
+        </div>
+        <p class="muted">Prends une photo de ton assiette, puis indique ce qu'elle contient — l'app compare à la répartition recommandée.</p>
+        <div class="card" id="mealFormCard" style="display:none; box-shadow:none; border-style:dashed; margin-top:10px; margin-bottom:0;">
+          <div class="field">
+            <label>Photo du repas</label>
+            <input type="file" accept="image/*" capture="environment" id="mealPhotoInput" onchange="handleMealPhoto(event)" style="padding:8px 0;border:none;background:none;">
+            <img id="mealPhotoPreview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;">
+          </div>
+          <p class="muted" style="margin-bottom:6px;">Cette assiette contient :</p>
+          <div class="check-row"><span>Protéines</span><div class="toggle" id="grp-proteines" onclick="toggleMealGroup('proteines',this)"><div class="knob"></div></div></div>
+          <div class="check-row"><span>Légumes</span><div class="toggle" id="grp-legumes" onclick="toggleMealGroup('legumes',this)"><div class="knob"></div></div></div>
+          <div class="check-row"><span>Féculents</span><div class="toggle" id="grp-feculents" onclick="toggleMealGroup('feculents',this)"><div class="knob"></div></div></div>
+          <div class="check-row"><span>Bons lipides</span><div class="toggle" id="grp-lipides" onclick="toggleMealGroup('lipides',this)"><div class="knob"></div></div></div>
+          <button class="btn" style="margin-top:10px;" onclick="saveMeal()">Enregistrer le repas</button>
+          <button class="btn outline" style="margin-top:8px;" onclick="closeMealForm()">Annuler</button>
+        </div>
+        <div id="mealJournal" style="margin-top:10px;"></div>
       </div>
 
       <div class="card">
@@ -592,8 +641,15 @@ const PHASES = [
 const LS_START = "p12_startDate";
 const LS_DIET = "p12_diet"; // {date: {petitdej:bool, dejeuner:bool, collation:bool, diner:bool, eau:bool}}
 const LS_MEASURES = "p12_measures"; // array
+const LS_CALTARGET = "p12_calTarget";
+const LS_FOODLOG = "p12_foodlog"; // {date: [{food, grams, kcal, protein}]}
+const LS_MEALS = "p12_meals"; // array of {id, date, time, photo, groups, feedback}
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
+function getCalorieTarget(){
+  const v = localStorage.getItem(LS_CALTARGET);
+  return v ? Number(v) : 1600;
+}
 
 function getStartDate(){
   let d = localStorage.getItem(LS_START);
@@ -656,7 +712,10 @@ function renderToday(){
 
 function saveStartDate(){
   const v = document.getElementById('startDateInput').value;
-  if(v){ localStorage.setItem(LS_START, v); refreshAll(); }
+  if(v){ localStorage.setItem(LS_START, v); }
+  const cal = document.getElementById('calorieTargetInput').value;
+  if(cal){ localStorage.setItem(LS_CALTARGET, cal); }
+  refreshAll();
 }
 
 /* ============== RENDER : PROGRAMME ============== */
@@ -790,6 +849,235 @@ function toggleDiet(key, el){
   renderDiet();
 }
 
+/* ============== ALIMENTS / CALORIES ============== */
+
+// valeurs nutritionnelles approximatives pour 100 g (aliments du plan diète)
+const FOOD_DB = [
+  {cat:"Protéines", name:"Poulet (blanc, cuit)", kcal:165, protein:31, portion:150},
+  {cat:"Protéines", name:"Dinde (cuite)", kcal:150, protein:29, portion:150},
+  {cat:"Protéines", name:"Jambon blanc", kcal:110, protein:18, portion:50},
+  {cat:"Protéines", name:"Bœuf maigre (cuit)", kcal:175, protein:26, portion:150},
+  {cat:"Protéines", name:"Veau (cuit)", kcal:172, protein:28, portion:150},
+  {cat:"Protéines", name:"Œufs", kcal:148, protein:13, portion:100},
+  {cat:"Protéines", name:"Skyr nature", kcal:63, protein:11, portion:150},
+  {cat:"Protéines", name:"Petits suisses nature", kcal:85, protein:8, portion:100},
+  {cat:"Protéines", name:"Yaourt grec nature", kcal:97, protein:9, portion:125},
+  {cat:"Protéines", name:"Whey (poudre)", kcal:380, protein:75, portion:30},
+  {cat:"Protéines", name:"Tofu", kcal:145, protein:15, portion:100},
+  {cat:"Protéines", name:"Lentilles (cuites)", kcal:116, protein:9, portion:150},
+  {cat:"Protéines", name:"Pois chiches (cuits)", kcal:164, protein:9, portion:150},
+  {cat:"Protéines", name:"Haricots rouges (cuits)", kcal:127, protein:9, portion:150},
+  {cat:"Glucides", name:"Riz basmati (cuit)", kcal:130, protein:2.7, portion:150},
+  {cat:"Glucides", name:"Quinoa (cuit)", kcal:120, protein:4.4, portion:150},
+  {cat:"Glucides", name:"Patate douce (cuite)", kcal:90, protein:2, portion:200},
+  {cat:"Glucides", name:"Pommes de terre vapeur", kcal:80, protein:2, portion:200},
+  {cat:"Glucides", name:"Flocons d'avoine", kcal:375, protein:13, portion:40},
+  {cat:"Glucides", name:"Pain complet ou seigle", kcal:250, protein:9, portion:60},
+  {cat:"Glucides", name:"Banane", kcal:90, protein:1, portion:120},
+  {cat:"Glucides", name:"Fruits rouges", kcal:50, protein:1, portion:100},
+  {cat:"Lipides", name:"Huile d'olive ou colza", kcal:900, protein:0, portion:10},
+  {cat:"Lipides", name:"Avocat", kcal:160, protein:2, portion:80},
+  {cat:"Lipides", name:"Amandes / noix", kcal:600, protein:20, portion:20},
+  {cat:"Lipides", name:"Graines de chia ou de lin", kcal:480, protein:17, portion:15},
+];
+
+function getFoodLog(){
+  return JSON.parse(localStorage.getItem(LS_FOODLOG) || "{}");
+}
+function setFoodLog(s){
+  localStorage.setItem(LS_FOODLOG, JSON.stringify(s));
+}
+function populateFoodSelect(){
+  const sel = document.getElementById('foodSelect');
+  if(!sel) return;
+  const groups = {};
+  FOOD_DB.forEach(f=>{ (groups[f.cat] = groups[f.cat]||[]).push(f); });
+  sel.innerHTML = Object.keys(groups).map(cat=>
+    `<optgroup label="${cat}">` + groups[cat].map((f,i)=>`<option value="${f.name}">${f.name}</option>`).join('') + `</optgroup>`
+  ).join('');
+  updateFoodPreview();
+}
+function openFoodForm(){
+  document.getElementById('foodFormCard').style.display = 'block';
+  populateFoodSelect();
+  document.getElementById('foodGrams').value = '';
+  updateFoodPreview();
+}
+function closeFoodForm(){
+  document.getElementById('foodFormCard').style.display = 'none';
+}
+function updateFoodPreview(){
+  const name = document.getElementById('foodSelect').value;
+  const food = FOOD_DB.find(f=>f.name===name);
+  if(!food) return;
+  const gramsInput = document.getElementById('foodGrams');
+  if(!gramsInput.value) gramsInput.placeholder = `ex : ${food.portion}`;
+  const grams = Number(gramsInput.value) || food.portion;
+  const kcal = Math.round(food.kcal * grams / 100);
+  const protein = Math.round(food.protein * grams / 100 * 10) / 10;
+  document.getElementById('foodPreview').value = `${kcal} kcal · ${protein} g protéines`;
+}
+function addFoodEntry(){
+  const name = document.getElementById('foodSelect').value;
+  const food = FOOD_DB.find(f=>f.name===name);
+  if(!food) return;
+  const grams = Number(document.getElementById('foodGrams').value) || food.portion;
+  const entry = {
+    food: food.name,
+    grams,
+    kcal: Math.round(food.kcal * grams / 100),
+    protein: Math.round(food.protein * grams / 100 * 10) / 10,
+  };
+  const date = todayISO();
+  const log = getFoodLog();
+  if(!log[date]) log[date] = [];
+  log[date].push(entry);
+  setFoodLog(log);
+  closeFoodForm();
+  renderCalories();
+}
+function removeFoodEntry(index){
+  const date = todayISO();
+  const log = getFoodLog();
+  if(log[date]){
+    log[date].splice(index,1);
+    setFoodLog(log);
+    renderCalories();
+  }
+}
+function renderCalories(){
+  const date = todayISO();
+  const log = getFoodLog();
+  const entries = log[date] || [];
+  const totalKcal = entries.reduce((s,e)=>s+e.kcal,0);
+  const totalProtein = Math.round(entries.reduce((s,e)=>s+e.protein,0)*10)/10;
+  const target = getCalorieTarget();
+  const pct = Math.min(100, Math.round(totalKcal/target*100));
+
+  document.getElementById('calorieSummary').innerHTML = `
+    <div class="row-between"><span class="muted">Calories</span><span><strong>${totalKcal}</strong> / ${target} kcal</span></div>
+    <div style="background:#e9ece8;border-radius:8px;height:8px;margin:6px 0 10px;overflow:hidden;"><div style="background:${pct>100?'#e76f51':'#1f6f63'};height:100%;width:${pct}%;"></div></div>
+    <div class="row-between"><span class="muted">Protéines</span><span><strong>${totalProtein}</strong> g (objectif 110 à 130 g)</span></div>
+  `;
+
+  const wrap = document.getElementById('foodLog');
+  if(entries.length===0){
+    wrap.innerHTML = `<div class="empty">Aucun aliment ajouté aujourd'hui.</div>`;
+    return;
+  }
+  wrap.innerHTML = entries.map((e,i)=>`
+    <div class="check-row"><span>${e.food} — ${e.grams} g <span class="muted">(${e.kcal} kcal, ${e.protein} g prot.)</span></span>
+    <button class="small-btn" onclick="removeFoodEntry(${i})" style="background:var(--coral-light);color:var(--coral);">Suppr.</button></div>
+  `).join('');
+}
+
+/* ============== JOURNAL REPAS (PHOTO) ============== */
+
+let currentMealPhoto = null;
+let currentMealGroups = {proteines:false, legumes:false, feculents:false, lipides:false};
+
+function getMeals(){
+  return JSON.parse(localStorage.getItem(LS_MEALS) || "[]");
+}
+function setMeals(arr){
+  // garder au maximum les 30 derniers repas pour limiter la taille du stockage local
+  if(arr.length > 30) arr = arr.slice(arr.length-30);
+  try{
+    localStorage.setItem(LS_MEALS, JSON.stringify(arr));
+  }catch(e){
+    // stockage plein : on retire les plus anciens et on retente
+    arr = arr.slice(Math.ceil(arr.length/2));
+    try{ localStorage.setItem(LS_MEALS, JSON.stringify(arr)); }catch(e2){}
+  }
+}
+function openMealForm(){
+  currentMealPhoto = null;
+  currentMealGroups = {proteines:false, legumes:false, feculents:false, lipides:false};
+  document.getElementById('mealFormCard').style.display = 'block';
+  document.getElementById('mealPhotoPreview').style.display = 'none';
+  document.getElementById('mealPhotoInput').value = '';
+  ['proteines','legumes','feculents','lipides'].forEach(k=>document.getElementById('grp-'+k).classList.remove('on'));
+}
+function closeMealForm(){
+  document.getElementById('mealFormCard').style.display = 'none';
+}
+function handleMealPhoto(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      // redimensionner pour limiter la taille stockée
+      const maxW = 480;
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width*scale;
+      canvas.height = img.height*scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      currentMealPhoto = canvas.toDataURL('image/jpeg', 0.6);
+      const preview = document.getElementById('mealPhotoPreview');
+      preview.src = currentMealPhoto;
+      preview.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function toggleMealGroup(key, el){
+  currentMealGroups[key] = !currentMealGroups[key];
+  el.classList.toggle('on');
+}
+function mealFeedback(groups){
+  const labels = {proteines:"protéines", legumes:"légumes", feculents:"féculents", lipides:"lipides"};
+  const missing = Object.keys(groups).filter(k=>!groups[k]).map(k=>labels[k]);
+  const count = Object.keys(groups).length - missing.length;
+  if(count===4) return "Repas complet : bien équilibré par rapport à la répartition recommandée.";
+  if(count===3) return `Repas presque complet — il manque : ${missing.join(', ')}.`;
+  if(count===2) return `Repas partiel — il manque : ${missing.join(', ')}.`;
+  return `Repas incomplet par rapport à la répartition recommandée — il manque : ${missing.join(', ')}.`;
+}
+function saveMeal(){
+  const entry = {
+    id: Date.now(),
+    date: todayISO(),
+    time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}),
+    photo: currentMealPhoto,
+    groups: {...currentMealGroups},
+    feedback: mealFeedback(currentMealGroups),
+  };
+  const arr = getMeals();
+  arr.push(entry);
+  setMeals(arr);
+  closeMealForm();
+  renderMealJournal();
+}
+function deleteMeal(id){
+  let arr = getMeals();
+  arr = arr.filter(m=>m.id!==id);
+  setMeals(arr);
+  renderMealJournal();
+}
+function renderMealJournal(){
+  const arr = getMeals().slice().reverse();
+  const wrap = document.getElementById('mealJournal');
+  if(arr.length===0){
+    wrap.innerHTML = `<div class="empty">Aucun repas enregistré pour l'instant.</div>`;
+    return;
+  }
+  wrap.innerHTML = arr.slice(0,15).map(m=>`
+    <div class="day-card" style="margin-bottom:8px;">
+      <div style="display:flex;gap:10px;padding:10px;">
+        ${m.photo ? `<img src="${m.photo}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex:0 0 auto;">` : `<div class="icon-circle" style="flex:0 0 auto;"></div>`}
+        <div style="flex:1;">
+          <div class="row-between"><strong style="font-size:13px;">${m.date} · ${m.time}</strong><button class="small-btn" style="background:var(--coral-light);color:var(--coral);" onclick="deleteMeal(${m.id})">Suppr.</button></div>
+          <p class="muted" style="margin-top:4px;">${m.feedback}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
 /* ============== SUIVI / MESURES ============== */
 
 function getMeasures(){
@@ -842,8 +1130,13 @@ function refreshAll(){
   renderToday();
   renderProgramme();
   renderDiet();
+  renderCalories();
+  renderMealJournal();
   renderMeasures();
   document.getElementById('startDateInput').value = getStartDate();
+  document.getElementById('calorieTargetInput').value = getCalorieTarget();
+  const warn = document.getElementById('calorieWarning');
+  warn.style.display = getCalorieTarget() < 1400 ? 'block' : 'none';
 }
 
 activePhase = currentPhaseId();
