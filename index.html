@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Programme 12 Semaines</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Programme 12S">
+<meta name="theme-color" content="#1f6f63">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --accent:#1f6f63;
+    --accent-light:#e7f3f0;
+    --coral:#e76f51;
+    --coral-light:#fdeee8;
+    --bg:#f6f7f5;
+    --card:#ffffff;
+    --text:#21302b;
+    --muted:#6b7670;
+    --border:#e4e7e3;
+    --radius:16px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  h1,h2,h3,h4{margin:0 0 6px 0;}
+  p{margin:0 0 8px 0;}
+  button{font-family:inherit;}
+  .app{
+    max-width:560px;
+    margin:0 auto;
+    min-height:100vh;
+    padding-bottom: calc(78px + var(--safe-bottom));
+  }
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:var(--accent);
+    color:#fff;
+    padding: calc(14px + var(--safe-top)) 18px 14px;
+    border-radius: 0 0 20px 20px;
+  }
+  header.top .title{font-size:19px;font-weight:700;}
+  header.top .sub{font-size:13px;opacity:.85;margin-top:2px;}
+  .badge-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .badge{
+    background:rgba(255,255,255,.18);
+    border-radius:20px;
+    padding:6px 12px;
+    font-size:12.5px;
+    font-weight:600;
+  }
+  main{padding:16px 14px 8px;}
+  section.screen{display:none;}
+  section.screen.active{display:block;}
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(20,30,25,.06);
+    border:1px solid var(--border);
+  }
+  .card h3{font-size:15px;color:var(--accent);}
+  .card h4{font-size:14px;}
+  .muted{color:var(--muted);font-size:13px;}
+  .pill-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;}
+  .pill{
+    flex:0 0 auto;
+    padding:8px 16px;
+    border-radius:20px;
+    background:var(--card);
+    border:1px solid var(--border);
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .warn{
+    background:var(--coral-light);
+    border:1px solid #f3c9b6;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:13px;
+    color:#8a3c25;
+    margin-bottom:14px;
+  }
+  .warn strong{color:#7a2e18;}
+  ul.clean{margin:6px 0 0 0;padding-left:18px;}
+  ul.clean li{margin-bottom:4px;font-size:13.5px;}
+  .day-card{
+    border:1px solid var(--border);
+    border-radius:14px;
+    margin-bottom:10px;
+    overflow:hidden;
+  }
+  .day-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 14px;
+    cursor:pointer;
+    background:#fafbfa;
+  }
+  .day-head.today{background:var(--accent-light);}
+  .day-head .d{font-weight:700;font-size:14px;}
+  .day-head .o{font-size:12px;color:var(--muted);}
+  .chevron{transition:transform .2s;color:var(--muted);}
+  .day-card.open .chevron{transform:rotate(180deg);}
+  .day-body{display:none;padding:4px 14px 14px;}
+  .day-card.open .day-body{display:block;}
+  table.exo{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  table.exo th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:4px 4px;border-bottom:1px solid var(--border);}
+  table.exo td{padding:8px 4px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  table.exo tr:last-child td{border-bottom:none;}
+  .exo-name{font-weight:600;}
+  .demo-btn{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:11.5px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .demo-btn:active{opacity:.8;}
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;
+    display:flex;
+    background:#fff;
+    border-top:1px solid var(--border);
+    padding-bottom: var(--safe-bottom);
+    max-width:560px;margin:0 auto;
+    z-index:30;
+  }
+  nav.tabbar button{
+    flex:1;
+    background:none;border:none;
+    padding:10px 0 8px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:var(--muted);
+    font-size:11px;font-weight:600;
+    cursor:pointer;
+  }
+  nav.tabbar button.active{color:var(--accent);}
+  nav.tabbar svg{width:22px;height:22px;}
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(10,15,12,.75);
+    display:none;align-items:center;justify-content:center;
+    z-index:100;padding:18px;
+  }
+  .modal-bg.open{display:flex;}
+  .modal{
+    background:#000;border-radius:14px;width:100%;max-width:480px;overflow:hidden;
+  }
+  .modal-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 14px;background:#111;color:#fff;font-size:13.5px;font-weight:600;
+  }
+  .modal-head button{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:2px 6px;}
+  .modal iframe{width:100%;aspect-ratio:16/9;border:none;display:block;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+    font-size:15px;background:#fafbfa;color:var(--text);
+  }
+  .btn{
+    background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;width:100%;
+  }
+  .btn.secondary{background:var(--coral);}
+  .btn.outline{background:none;border:1px solid var(--border);color:var(--text);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .check-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid var(--border);
+  }
+  .check-row:last-child{border-bottom:none;}
+  .check-row span{font-size:14px;}
+  .toggle{
+    width:46px;height:28px;border-radius:16px;background:#dfe3df;position:relative;cursor:pointer;flex:0 0 auto;transition:background .2s;
+  }
+  .toggle.on{background:var(--accent);}
+  .toggle .knob{
+    position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;
+    transition:left .2s; box-shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+  .toggle.on .knob{left:21px;}
+  .streak{display:flex;gap:5px;margin-top:6px;}
+  .streak .d{
+    width:24px;height:24px;border-radius:6px;background:#e9ece8;font-size:9px;
+    display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700;
+  }
+  .streak .d.done{background:var(--accent);color:#fff;}
+  table.measures{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+  table.measures th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;padding:4px 4px;border-bottom:1px solid var(--border);}
+  table.measures td{padding:7px 4px;border-bottom:1px solid var(--border);}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:18px 0;}
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  .small-btn{
+    background:var(--accent-light);color:var(--accent);border:none;border-radius:8px;
+    padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;
+  }
+  .icon-circle{width:34px;height:34px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="title">Programme 12 Semaines</div>
+    <div class="sub">Sèche &amp; recomposition · genoux/hanche protégés</div>
+    <div class="badge-row">
+      <div class="badge" id="badgeWeek">Semaine 1 / 12</div>
+      <div class="badge" id="badgePhase">Phase 1</div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ACCUEIL -->
+    <section class="screen active" id="screen-accueil">
+
+      <div class="card">
+        <h3>Objectif sur 12 semaines</h3>
+        <p class="muted" style="margin-bottom:8px;">Pas de "maigrir vite" : raffermir, dessiner, réduire le gras, garder la force.</p>
+        <ul class="clean">
+          <li>Perte de 3 à 6 kg selon régularité</li>
+          <li>Tour de taille en baisse, ventre plus plat</li>
+          <li>Dos plus dessiné, bras plus fermes</li>
+          <li>Jambes plus toniques sans surcharger les articulations</li>
+          <li>Meilleure posture et meilleure endurance</li>
+        </ul>
+      </div>
+
+      <div class="warn">
+        <strong>Avant de commencer :</strong> en cas de douleur inhabituelle au genou ou à la hanche, d'essoufflement anormal, de vertiges ou de douleur thoracique, on arrête et on demande un avis médical. Avec une prothèse de genou et de l'arthrose de hanche, la progression doit rester contrôlée.
+      </div>
+
+      <div class="card" id="todayCard">
+        <h3>Séance d'aujourd'hui</h3>
+        <div id="todayContent"></div>
+        <button class="btn" style="margin-top:10px;" onclick="goToProgramme()">Voir le détail de la séance</button>
+      </div>
+
+      <div class="card">
+        <h3>Les 4 piliers</h3>
+        <ul class="clean">
+          <li><strong>Musculation</strong> — 4 à 5 séances par semaine</li>
+          <li><strong>Cardio</strong> bas impact</li>
+          <li><strong>Déficit calorique</strong> modéré</li>
+          <li><strong>Récupération</strong> et mobilité</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Règle d'intensité</h3>
+        <p class="muted">Sensation d'effort entre 6 et 8/10 :</p>
+        <ul class="clean">
+          <li>2 à 3 répétitions "en réserve"</li>
+          <li>Pas de douleur articulaire — fatigue musculaire oui, douleur genou/hanche non</li>
+          <li>Mouvement lent et contrôlé</li>
+          <li>Priorité aux exercices stables, guidés, sans impact, sans amplitude extrême</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>À éviter sur tout le programme</h3>
+        <ul class="clean">
+          <li>Sèche trop basse en calories</li>
+          <li>Cardio à jeun trop fréquent</li>
+          <li>HIIT violent, squats profonds lourds, fentes sautées, burpees</li>
+          <li>Course à pied répétée, step trop haut</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Réglage du programme</h3>
+        <div class="field">
+          <label>Date de début du programme</label>
+          <input type="date" id="startDateInput">
+        </div>
+        <button class="btn outline" onclick="saveStartDate()">Mettre à jour la semaine en cours</button>
+      </div>
+
+    </section>
+
+    <!-- PROGRAMME -->
+    <section class="screen" id="screen-programme">
+      <div class="pill-row" id="phasePills"></div>
+      <div class="card" id="phaseIntroCard"></div>
+      <div id="weekSchedule"></div>
+    </section>
+
+    <!-- DIETE -->
+    <section class="screen" id="screen-diete">
+
+      <div class="card">
+        <h3>Suivi du jour</h3>
+        <p class="muted" id="dietDateLabel"></p>
+        <div id="dietChecklist"></div>
+        <div style="margin-top:10px;">
+          <p class="muted" style="margin-bottom:4px;">7 derniers jours</p>
+          <div class="streak" id="dietStreak"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Répartition à chaque repas</h3>
+        <ul class="clean">
+          <li>1 portion de protéines</li>
+          <li>1 grosse portion de légumes</li>
+          <li>1 portion de féculents adaptée à l'entraînement</li>
+          <li>1 petite portion de bons lipides</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Protéines — 110 à 130 g / jour</h3>
+        <p class="muted">Œufs, poulet, dinde, jambon blanc de qualité, bœuf maigre, veau, skyr, petits suisses, yaourt grec, whey, tofu, lentilles, pois chiches, haricots rouges.</p>
+        <p class="muted" style="margin-top:6px;"><strong>Pas de poisson ni de fruits de mer</strong> (allergie).</p>
+      </div>
+
+      <div class="card">
+        <h3>Glucides</h3>
+        <p class="muted">Riz basmati, quinoa, patate douce, pommes de terre vapeur, flocons d'avoine, pain complet ou seigle, lentilles, pois chiches, fruits.</p>
+        <p class="muted" style="margin-top:6px;">À placer surtout au petit déjeuner, au déjeuner, et avant/après séance. Le soir, on réduit un peu si la séance est loin, sans supprimer systématiquement.</p>
+      </div>
+
+      <div class="card">
+        <h3>Lipides</h3>
+        <p class="muted">Huile d'olive, huile de colza, avocat, amandes/noix, graines de chia ou de lin, œufs. En petites quantités : c'est calorique.</p>
+      </div>
+
+      <div class="card">
+        <h3>Exemple de journée</h3>
+        <h4>Petit déjeuner</h4>
+        <p class="muted">Option 1 : 2 petits suisses ou skyr, ½ banane ou fruits rouges, 20 à 30 g de flocons d'avoine, 1 dose de whey si besoin, cannelle.</p>
+        <p class="muted">Option 2 : 2 œufs, 1 tranche de jambon, 1 tranche de pain complet, crudités ou fruit.</p>
+        <h4 style="margin-top:10px;">Déjeuner</h4>
+        <p class="muted">Poulet ou dinde, quinoa ou riz, courgettes/concombre/tomates/salade, 1 c. à soupe d'huile d'olive ou colza, yaourt nature ou fruit.</p>
+        <h4 style="margin-top:10px;">Collation pré-sport (2 à 3h avant)</h4>
+        <p class="muted">Petits suisses + whey, ou banane + skyr, ou pain complet + jambon, ou smoothie léger whey + lait végétal + fruits rouges.</p>
+        <h4 style="margin-top:10px;">Dîner</h4>
+        <p class="muted">Protéine maigre (œufs, dinde, tofu, bœuf maigre), légumes cuits ou froids, petite portion de féculent si entraînement intense, dessert léger (fromage blanc, petits suisses, fruit rouge, compote sans sucre).</p>
+      </div>
+
+    </section>
+
+    <!-- SUIVI -->
+    <section class="screen" id="screen-suivi">
+
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0;">Mesures</h3>
+          <button class="small-btn" onclick="openMeasureForm()">+ Ajouter</button>
+        </div>
+        <p class="muted">Le plus important : le tour de taille et les photos, pas seulement le poids.</p>
+        <ul class="clean">
+          <li>Poids — 1 à 2 fois / semaine</li>
+          <li>Tour de taille — 1 fois / semaine</li>
+          <li>Tour de hanche — toutes les 2 semaines</li>
+          <li>Photos — toutes les 3 semaines</li>
+          <li>Douleur genou/hanche — après chaque séance</li>
+          <li>Sommeil et énergie — quotidien</li>
+        </ul>
+      </div>
+
+      <div class="card" id="measureFormCard" style="display:none;">
+        <h3>Nouvelle mesure</h3>
+        <div class="field"><label>Date</label><input type="date" id="mDate"></div>
+        <div class="grid2">
+          <div class="field"><label>Poids (kg)</label><input type="number" step="0.1" id="mWeight"></div>
+          <div class="field"><label>Tour de taille (cm)</label><input type="number" step="0.5" id="mWaist"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Tour de hanche (cm)</label><input type="number" step="0.5" id="mHip"></div>
+          <div class="field"><label>Douleur genou/hanche (0-10)</label><input type="number" min="0" max="10" id="mPain"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Sommeil (1-5)</label><input type="number" min="1" max="5" id="mSleep"></div>
+          <div class="field"><label>Énergie entraînement (1-5)</label><input type="number" min="1" max="5" id="mEnergy"></div>
+        </div>
+        <button class="btn" onclick="saveMeasure()">Enregistrer</button>
+        <button class="btn outline" style="margin-top:8px;" onclick="closeMeasureForm()">Annuler</button>
+      </div>
+
+      <div class="card">
+        <h3>Historique</h3>
+        <div id="measureHistory"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="accueil" onclick="showTab('accueil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Accueil
+    </button>
+    <button class="tab-btn" data-tab="programme" onclick="showTab('programme')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="12" r="2.3"/><path d="M8.3 12h7.4M3 9v6M21 9v6"/></svg>
+      Programme
+    </button>
+    <button class="tab-btn" data-tab="diete" onclick="showTab('diete')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3c-1.5 2-2 4-2 5.5C10 11 11 12 12 12s2-1 2-3.5C14 7 13.5 5 12 3z"/><path d="M5 13c0 5 3 8 7 8s7-3 7-8a7 7 0 00-2-2"/></svg>
+      Diète
+    </button>
+    <button class="tab-btn" data-tab="suivi" onclick="showTab('suivi')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg>
+      Suivi
+    </button>
+  </nav>
+
+</div>
+
+<div class="modal-bg" id="videoModal" onclick="if(event.target===this)closeVideo()">
+  <div class="modal">
+    <div class="modal-head">
+      <span id="videoTitle"></span>
+      <button onclick="closeVideo()">✕</button>
+    </div>
+    <div id="videoFrameWrap"></div>
+  </div>
+</div>
+
+<script>
+/* ============== DONNÉES DU PROGRAMME ============== */
+
+const EXO = {
+  presse: {n:"Presse à cuisses (amplitude modérée)", v:"WkOQLZ45v54"},
+  presseBox: {n:"Presse à cuisses ou box squat haut", v:"WkOQLZ45v54"},
+  pressePh3: {n:"Presse à cuisses", v:"WkOQLZ45v54"},
+  hipthrust: {n:"Hip thrust ou pont fessier", v:"pF17m_CXfL0"},
+  hipthrust2: {n:"Hip thrust", v:"pF17m_CXfL0"},
+  legcurl: {n:"Leg curl assis ou allongé", v:"188AlXRwSPw"},
+  legcurl2: {n:"Leg curl", v:"188AlXRwSPw"},
+  abduction: {n:"Abduction machine ou élastique", v:"TDMroDFThJo"},
+  abduction2: {n:"Abduction machine", v:"TDMroDFThJo"},
+  rdl: {n:"Soulevé de terre roumain léger", v:"QrgidWFKaYs"},
+  rdl2: {n:"Soulevé de terre roumain", v:"QrgidWFKaYs"},
+  mollets: {n:"Mollets debout ou assis", v:"yQv9y1oHitc"},
+  mollets2: {n:"Mollets", v:"yQv9y1oHitc"},
+  deadbug: {n:"Gainage dead bug", v:"4y54_ndGrdw"},
+  deadbug2: {n:"Dead bug", v:"4y54_ndGrdw"},
+  tiragev: {n:"Tirage vertical poitrine", v:"dOukQ7QBSQs"},
+  tiragevn: {n:"Tirage vertical prise neutre", v:"dOukQ7QBSQs"},
+  tiragev2: {n:"Tirage vertical", v:"dOukQ7QBSQs"},
+  rowing: {n:"Rowing assis poulie", v:"w2Q7LbkhtLI"},
+  rowingu: {n:"Rowing unilatéral haltère ou machine", v:"w2Q7LbkhtLI"},
+  rowingassis: {n:"Rowing assis", v:"w2Q7LbkhtLI"},
+  tirageh: {n:"Tirage horizontal", v:"w2Q7LbkhtLI"},
+  facepull: {n:"Face pull", v:"67PKTDSKWWM"},
+  devepaule: {n:"Développé épaules machine ou haltères légers", v:"p6A4CWhgKXE"},
+  devepaule2: {n:"Développé épaules", v:"p6A4CWhgKXE"},
+  curlbiceps: {n:"Curl biceps", v:"8wvflicHXXw"},
+  curlmarteau: {n:"Curl marteau", v:"NqprcBoRkSc"},
+  triceps: {n:"Extension triceps poulie", v:"IThPDABrKXk"},
+  tricepscorde: {n:"Triceps corde", v:"IThPDABrKXk"},
+  pallof: {n:"Pallof press", v:"I4SKLCM9lyo"},
+  devpoitrine: {n:"Développé poitrine machine", v:"B-cCh7H0CPY"},
+  elevlat: {n:"Élévations latérales", v:"q_DYeb_daeY"},
+  planche: {n:"Planche inclinée", v:"bG17b4f_4bg"},
+  oiseau: {n:"Oiseau arrière d'épaule", v:"lpq_HirzSMA"},
+  pompes: {n:"Pompes inclinées ou développé machine", v:"JHUiDAd803s"},
+  birddog: {n:"Bird dog", v:"ZmW47SX0lts"},
+  gainagelat: {n:"Gainage latéral genoux au sol", v:"hAWS7C17uJY"},
+};
+
+function ex(key, sets, reps){ return {name: EXO[key].n, video: EXO[key].v, sets, reps}; }
+
+const SCHEDULE = [
+  {day:"Lundi", titleKey:"s1"},
+  {day:"Mardi", titleKey:"s2"},
+  {day:"Mercredi", titleKey:"s3"},
+  {day:"Jeudi", titleKey:"s4"},
+  {day:"Vendredi", titleKey:"s5"},
+  {day:"Samedi", titleKey:"s6"},
+  {day:"Dimanche", titleKey:"s7"},
+];
+
+const SESSIONS_COMMON = {
+  s6: {title:"Marche, vélo doux ou repos actif", objectif:"Récupération", type:"repos", details:"Marche tranquille ou vélo très facile 20 à 40 min, ou repos complet selon la fatigue."},
+  s7: {title:"Repos complet", objectif:"Régénération", type:"repos", details:"Pas d'entraînement. Mobilité légère ou étirements doux si besoin."},
+};
+
+const PHASES = [
+  {
+    id:1, label:"Phase 1", range:"Semaines 1 à 4",
+    intro:"Réactivation, technique, perte de gras progressive. Objectif : remettre de la qualité dans les mouvements, activer les fessiers, renforcer le dos, relancer la dépense énergétique.",
+    sessions:{
+      s1:{title:"Bas du corps doux + fessiers", objectif:"Tonifier sans traumatiser le genou", type:"muscu",
+        warmup:"8 à 10 min de vélo ou marche douce.",
+        exercises:[ex('presse',3,'12'), ex('hipthrust',4,'12'), ex('legcurl',3,'12'), ex('abduction',3,'15'), ex('rdl',3,'10'), ex('mollets',3,'15'), ex('deadbug',3,'10 par côté')],
+        cardio:"10 à 15 min vélo tranquille en fin de séance.",
+        avoid:"À éviter : squats profonds, fentes longues, sauts, step trop haut."},
+      s2:{title:"Haut du corps dos/bras", objectif:"Construire le dos pour affiner visuellement la taille", type:"muscu",
+        warmup:"Mobilisation épaules + 5 min rameur doux si toléré, sinon vélo.",
+        exercises:[ex('tiragev',4,'10 à 12'), ex('rowing',4,'10 à 12'), ex('facepull',3,'15'), ex('devepaule',3,'10'), ex('curlbiceps',3,'12'), ex('triceps',3,'12'), ex('pallof',3,'12 par côté')]},
+      s3:{title:"Cardio bas impact + mobilité", objectif:"Brûler sans casser la récupération", type:"cardio",
+        details:"Cardio au choix : vélo, elliptique, marche inclinée douce, aquagym, rameur (si hanche/genou OK). Format : 35 à 45 minutes en zone confortable — tu dois pouvoir parler, mais pas chanter.",
+        mobility:["Ouverture de hanche douce","Étirement quadriceps léger","Mobilité cheville","Respiration diaphragmatique","Posture dos/épaules"],
+        mobilityNote:"Puis mobilité 12 minutes :"},
+      s4:{title:"Full body musculaire", objectif:"Dépense + maintien muscle", type:"muscu",
+        exercises:[ex('presseBox',3,'10'), ex('tirageh',3,'12'), ex('devpoitrine',3,'10'), ex('hipthrust2',3,'12'), ex('elevlat',3,'15'), ex('legcurl2',3,'12'), ex('planche',3,'30 sec')],
+        cardio:"10 min tranquille en fin de séance."},
+      s5:{title:"Haut du corps + gainage", objectif:"Dos, épaules, bras, ventre", type:"muscu",
+        exercises:[ex('tiragevn',3,'12'), ex('rowingu',3,'10 par côté'), ex('oiseau',3,'15'), ex('pompes',3,'10'), ex('curlmarteau',3,'12'), ex('tricepscorde',3,'12'), ex('birddog',3,'10 par côté'), ex('gainagelat',3,'20 à 30 sec')]},
+      ...SESSIONS_COMMON
+    }
+  },
+  {
+    id:2, label:"Phase 2", range:"Semaines 5 à 8",
+    intro:"Progression, tonification visible, hausse de la dépense. Objectif : augmenter progressivement la charge ou les répétitions, sans agresser les articulations. Même structure de semaine, mais on progresse : +1 série sur les exercices principaux, ou +2 répétitions par série, ou +2 à 5 % de charge si le mouvement est propre. Cardio légèrement plus long.",
+    progression:[
+      ["Presse à cuisses","passer à 4 séries de 10"],
+      ["Hip thrust","4 séries de 10 à 12"],
+      ["Tirage vertical","4 séries de 10"],
+      ["Rowing","4 séries de 10"],
+      ["Leg curl","4 séries de 12"],
+      ["Gainage","augmenter de 10 secondes"],
+    ],
+    cardioOptions:[
+      {title:"Option 1 — Cardio zone 2", text:"40 à 50 min vélo, marche ou elliptique."},
+      {title:"Option 2 — Fractionné doux sans impact", text:"Sur vélo uniquement : 8 min échauffement, 8 cycles de 30 sec rapide / 90 sec lent, 5 min retour au calme. Pas de sprint violent — l'idée est d'accélérer le cœur, pas de se mettre dans le rouge."},
+    ],
+    sessions:{
+      s1:{title:"Bas du corps doux + fessiers", objectif:"Tonifier sans traumatiser le genou", type:"muscu",
+        warmup:"8 à 10 min de vélo ou marche douce.",
+        exercises:[ex('presse',4,'10'), ex('hipthrust',4,'10 à 12'), ex('legcurl',4,'12'), ex('abduction',3,'15'), ex('rdl',3,'10'), ex('mollets',3,'15'), ex('deadbug',3,'10 par côté')],
+        cardio:"10 à 15 min vélo tranquille en fin de séance.",
+        avoid:"À éviter : squats profonds, fentes longues, sauts, step trop haut."},
+      s2:{title:"Haut du corps dos/bras", objectif:"Construire le dos pour affiner visuellement la taille", type:"muscu",
+        warmup:"Mobilisation épaules + 5 min rameur doux si toléré, sinon vélo.",
+        exercises:[ex('tiragev',4,'10'), ex('rowing',4,'10'), ex('facepull',3,'15'), ex('devepaule',3,'10'), ex('curlbiceps',3,'12'), ex('triceps',3,'12'), ex('pallof',3,'12 par côté')]},
+      s3:{title:"Cardio bas impact + mobilité", objectif:"Brûler sans casser la récupération", type:"cardio",
+        details:"Deux options par semaine — voir encadré ci-dessus.",
+        mobility:["Ouverture de hanche douce","Étirement quadriceps léger","Mobilité cheville","Respiration diaphragmatique","Posture dos/épaules"],
+        mobilityNote:"Puis mobilité 12 minutes :"},
+      s4:{title:"Full body musculaire", objectif:"Dépense + maintien muscle", type:"muscu",
+        exercises:[ex('presseBox',3,'10'), ex('tirageh',3,'12'), ex('devpoitrine',3,'10'), ex('hipthrust2',3,'12'), ex('elevlat',3,'15'), ex('legcurl2',3,'12'), ex('planche',3,'30 sec')],
+        cardio:"10 min tranquille en fin de séance."},
+      s5:{title:"Haut du corps + gainage", objectif:"Dos, épaules, bras, ventre", type:"muscu",
+        exercises:[ex('tiragevn',3,'12'), ex('rowingu',3,'10 par côté'), ex('oiseau',3,'15'), ex('pompes',3,'10'), ex('curlmarteau',3,'12'), ex('tricepscorde',3,'12'), ex('birddog',3,'10 par côté'), ex('gainagelat',3,'20 à 30 sec')]},
+      ...SESSIONS_COMMON
+    }
+  },
+  {
+    id:3, label:"Phase 3", range:"Semaines 9 à 12",
+    intro:"Définition, posture, maintien musculaire. Objectif : garder le muscle, augmenter la dépense et finir la sèche sans épuisement. On reste sur 5 séances, avec une logique plus « densité » : moins de temps mort, mouvements propres, intensité maîtrisée. Ne pas faire de HIIT dur si la récupération baisse ou si les douleurs articulaires augmentent.",
+    cardioOptions:[
+      {title:"1 séance longue douce", text:"45 à 60 min."},
+      {title:"1 séance fractionnée vélo", text:"30 sec rapide / 90 sec lent, 8 à 10 cycles."},
+      {title:"1 marche active", text:"45 min, sans douleur hanche/genou."},
+    ],
+    sessions:{
+      s1:{title:"Bas du corps — phase 3 (densité)", objectif:"Tonifier sans traumatiser le genou", type:"muscu",
+        exercises:[ex('pressePh3',4,'8 à 10'), ex('hipthrust2',4,'10'), ex('legcurl2',4,'10 à 12'), ex('abduction2',4,'15'), ex('rdl2',3,'10'), ex('mollets2',4,'15'), ex('deadbug2',3,'12 par côté')],
+        cardio:"Finisher doux : 8 à 12 min vélo."},
+      s2:{title:"Haut du corps — phase 3 (densité)", objectif:"Épaules/dos/bras plus dessinés", type:"muscu",
+        exercises:[ex('tiragev2',4,'8 à 10'), ex('rowingassis',4,'8 à 10'), ex('facepull',3,'15'), ex('devepaule2',3,'10'), ex('elevlat',3,'15'), ex('curlbiceps',3,'10 à 12'), ex('tricepscorde',3,'10 à 12')]},
+      s3:{title:"Cardio bas impact + mobilité", objectif:"Brûler sans casser la récupération", type:"cardio",
+        details:"3 formats possibles dans la semaine — voir encadré ci-dessus.",
+        mobility:["Ouverture de hanche douce","Étirement quadriceps léger","Mobilité cheville","Respiration diaphragmatique","Posture dos/épaules"],
+        mobilityNote:"Puis mobilité 12 minutes :"},
+      s4:{title:"Full body musculaire (densité)", objectif:"Dépense + maintien muscle", type:"muscu",
+        exercises:[ex('presseBox',3,'10'), ex('tirageh',3,'12'), ex('devpoitrine',3,'10'), ex('hipthrust2',3,'12'), ex('elevlat',3,'15'), ex('legcurl2',3,'12'), ex('planche',3,'30 sec')],
+        cardio:"Même format que phases 1/2, avec moins de repos entre les séries."},
+      s5:{title:"Haut du corps + gainage (densité)", objectif:"Dos, épaules, bras, ventre", type:"muscu",
+        exercises:[ex('tiragevn',3,'12'), ex('rowingu',3,'10 par côté'), ex('oiseau',3,'15'), ex('pompes',3,'10'), ex('curlmarteau',3,'12'), ex('tricepscorde',3,'12'), ex('birddog',3,'10 par côté'), ex('gainagelat',3,'20 à 30 sec')]},
+      ...SESSIONS_COMMON
+    }
+  },
+];
+
+/* ============== ÉTAT / STORAGE ============== */
+
+const LS_START = "p12_startDate";
+const LS_DIET = "p12_diet"; // {date: {petitdej:bool, dejeuner:bool, collation:bool, diner:bool, eau:bool}}
+const LS_MEASURES = "p12_measures"; // array
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+function getStartDate(){
+  let d = localStorage.getItem(LS_START);
+  if(!d){ d = todayISO(); localStorage.setItem(LS_START, d); }
+  return d;
+}
+function currentWeek(){
+  const start = new Date(getStartDate());
+  const now = new Date(todayISO());
+  const diffDays = Math.floor((now - start) / 86400000);
+  let week = Math.floor(diffDays/7) + 1;
+  if(week < 1) week = 1;
+  if(week > 12) week = 12;
+  return week;
+}
+function currentPhaseId(){
+  const w = currentWeek();
+  if(w <= 4) return 1;
+  if(w <= 8) return 2;
+  return 3;
+}
+
+/* ============== NAVIGATION ============== */
+
+let activePhase = currentPhaseId();
+
+function showTab(tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  window.scrollTo(0,0);
+}
+function goToProgramme(){
+  activePhase = currentPhaseId();
+  renderProgramme();
+  showTab('programme');
+}
+
+/* ============== RENDER : ACCUEIL ============== */
+
+function renderHeader(){
+  document.getElementById('badgeWeek').textContent = `Semaine ${currentWeek()} / 12`;
+  document.getElementById('badgePhase').textContent = `Phase ${currentPhaseId()}`;
+}
+
+function frenchDayKey(){
+  const map = {1:"s1",2:"s2",3:"s3",4:"s4",5:"s5",6:"s6",0:"s7"};
+  return map[new Date().getDay()];
+}
+
+function renderToday(){
+  const phase = PHASES.find(p=>p.id===currentPhaseId());
+  const key = frenchDayKey();
+  const session = phase.sessions[key];
+  const dayName = SCHEDULE.find(d=>d.titleKey===key).day;
+  let html = `<p style="margin-bottom:2px;"><strong>${dayName}</strong> — ${session.title}</p>`;
+  if(session.objectif) html += `<p class="muted">${session.objectif}</p>`;
+  document.getElementById('todayContent').innerHTML = html;
+}
+
+function saveStartDate(){
+  const v = document.getElementById('startDateInput').value;
+  if(v){ localStorage.setItem(LS_START, v); refreshAll(); }
+}
+
+/* ============== RENDER : PROGRAMME ============== */
+
+function renderPhasePills(){
+  const wrap = document.getElementById('phasePills');
+  wrap.innerHTML = PHASES.map(p=>`<div class="pill ${p.id===activePhase?'active':''}" onclick="selectPhase(${p.id})">${p.label}</div>`).join('');
+}
+function selectPhase(id){
+  activePhase = id;
+  renderProgramme();
+}
+
+function renderProgramme(){
+  renderPhasePills();
+  const phase = PHASES.find(p=>p.id===activePhase);
+
+  let introHtml = `<h3>${phase.label} — ${phase.range}</h3><p class="muted">${phase.intro}</p>`;
+  if(phase.progression){
+    introHtml += `<h4 style="margin-top:10px;">Progression principale</h4><ul class="clean">` +
+      phase.progression.map(([n,p])=>`<li><strong>${n}</strong> — ${p}</li>`).join('') + `</ul>`;
+  }
+  if(phase.cardioOptions){
+    introHtml += `<h4 style="margin-top:10px;">Cardio de la phase</h4>`;
+    phase.cardioOptions.forEach(o=>{
+      introHtml += `<p class="muted" style="margin-bottom:6px;"><strong>${o.title}</strong><br>${o.text}</p>`;
+    });
+  }
+  document.getElementById('phaseIntroCard').innerHTML = introHtml;
+
+  const todayKey = frenchDayKey();
+  const wrap = document.getElementById('weekSchedule');
+  wrap.innerHTML = SCHEDULE.map(d=>{
+    const s = phase.sessions[d.titleKey];
+    const isToday = d.titleKey === todayKey;
+    let body = '';
+    if(s.warmup) body += `<p class="muted"><strong>Échauffement :</strong> ${s.warmup}</p>`;
+    if(s.exercises){
+      body += `<table class="exo"><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th></th></tr>` +
+        s.exercises.map(e=>`<tr><td class="exo-name">${e.name}</td><td>${e.sets}</td><td>${e.reps}</td><td><button class="demo-btn" onclick='openVideo("${e.video}", ${JSON.stringify(e.name)})'>Démo</button></td></tr>`).join('') +
+        `</table>`;
+    }
+    if(s.cardio) body += `<p class="muted" style="margin-top:8px;"><strong>Cardio :</strong> ${s.cardio}</p>`;
+    if(s.details) body += `<p class="muted">${s.details}</p>`;
+    if(s.mobility){
+      body += `<p class="muted" style="margin-top:8px;"><strong>${s.mobilityNote||''}</strong></p><ul class="clean">` + s.mobility.map(m=>`<li>${m}</li>`).join('') + `</ul>`;
+    }
+    if(s.avoid) body += `<p class="muted" style="margin-top:8px;color:#8a3c25;">${s.avoid}</p>`;
+    if(s.type==='repos' && s.details) body = `<p class="muted">${s.details}</p>`;
+
+    return `<div class="day-card" id="day-${d.titleKey}">
+      <div class="day-head ${isToday?'today':''}" onclick="toggleDay('${d.titleKey}')">
+        <div><div class="d">${d.day}${isToday?" · aujourd'hui":''}</div><div class="o">${s.title} — ${s.objectif||''}</div></div>
+        <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="day-body">${body}</div>
+    </div>`;
+  }).join('');
+
+  if(todayKey){
+    const el = document.getElementById('day-'+todayKey);
+    if(el) el.classList.add('open');
+  }
+}
+
+function toggleDay(key){
+  document.getElementById('day-'+key).classList.toggle('open');
+}
+
+/* ============== VIDEO MODAL ============== */
+
+function openVideo(videoId, name){
+  document.getElementById('videoTitle').textContent = name;
+  document.getElementById('videoFrameWrap').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  document.getElementById('videoModal').classList.add('open');
+}
+function closeVideo(){
+  document.getElementById('videoModal').classList.remove('open');
+  document.getElementById('videoFrameWrap').innerHTML = '';
+}
+
+/* ============== DIÈTE ============== */
+
+const DIET_ITEMS = [
+  {key:"petitdej", label:"Petit déjeuner équilibré"},
+  {key:"dejeuner", label:"Déjeuner équilibré"},
+  {key:"collation", label:"Collation pré-sport (si séance)"},
+  {key:"diner", label:"Dîner équilibré"},
+  {key:"proteines", label:"Objectif protéines atteint"},
+  {key:"eau", label:"Hydratation suffisante"},
+];
+
+function getDietStore(){
+  return JSON.parse(localStorage.getItem(LS_DIET) || "{}");
+}
+function setDietStore(s){
+  localStorage.setItem(LS_DIET, JSON.stringify(s));
+}
+function renderDiet(){
+  const date = todayISO();
+  document.getElementById('dietDateLabel').textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+  const store = getDietStore();
+  const today = store[date] || {};
+  const wrap = document.getElementById('dietChecklist');
+  wrap.innerHTML = DIET_ITEMS.map(it=>{
+    const on = !!today[it.key];
+    return `<div class="check-row"><span>${it.label}</span><div class="toggle ${on?'on':''}" onclick="toggleDiet('${it.key}', this)"><div class="knob"></div></div></div>`;
+  }).join('');
+
+  // streak last 7 days
+  const streakWrap = document.getElementById('dietStreak');
+  let html = '';
+  for(let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    const iso = d.toISOString().slice(0,10);
+    const rec = store[iso] || {};
+    const count = DIET_ITEMS.filter(it=>rec[it.key]).length;
+    const done = count >= DIET_ITEMS.length - 1;
+    html += `<div class="d ${done?'done':''}" title="${iso}">${d.getDate()}</div>`;
+  }
+  streakWrap.innerHTML = html;
+}
+function toggleDiet(key, el){
+  const date = todayISO();
+  const store = getDietStore();
+  if(!store[date]) store[date] = {};
+  store[date][key] = !store[date][key];
+  setDietStore(store);
+  el.classList.toggle('on');
+  renderDiet();
+}
+
+/* ============== SUIVI / MESURES ============== */
+
+function getMeasures(){
+  return JSON.parse(localStorage.getItem(LS_MEASURES) || "[]");
+}
+function setMeasures(arr){
+  localStorage.setItem(LS_MEASURES, JSON.stringify(arr));
+}
+function openMeasureForm(){
+  document.getElementById('mDate').value = todayISO();
+  document.getElementById('measureFormCard').style.display = 'block';
+}
+function closeMeasureForm(){
+  document.getElementById('measureFormCard').style.display = 'none';
+}
+function saveMeasure(){
+  const entry = {
+    date: document.getElementById('mDate').value || todayISO(),
+    weight: document.getElementById('mWeight').value,
+    waist: document.getElementById('mWaist').value,
+    hip: document.getElementById('mHip').value,
+    pain: document.getElementById('mPain').value,
+    sleep: document.getElementById('mSleep').value,
+    energy: document.getElementById('mEnergy').value,
+  };
+  const arr = getMeasures();
+  arr.push(entry);
+  arr.sort((a,b)=> a.date < b.date ? 1 : -1);
+  setMeasures(arr);
+  ['mWeight','mWaist','mHip','mPain','mSleep','mEnergy'].forEach(id=>document.getElementById(id).value='');
+  closeMeasureForm();
+  renderMeasures();
+}
+function renderMeasures(){
+  const arr = getMeasures();
+  const wrap = document.getElementById('measureHistory');
+  if(arr.length===0){
+    wrap.innerHTML = `<div class="empty">Aucune mesure enregistrée pour l'instant.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="measures"><tr><th>Date</th><th>Poids</th><th>Taille</th><th>Hanche</th><th>Douleur</th></tr>` +
+    arr.map(e=>`<tr><td>${e.date}</td><td>${e.weight||'—'}${e.weight?' kg':''}</td><td>${e.waist||'—'}${e.waist?' cm':''}</td><td>${e.hip||'—'}${e.hip?' cm':''}</td><td>${e.pain||'—'}</td></tr>`).join('') +
+    `</table>`;
+}
+
+/* ============== INIT ============== */
+
+function refreshAll(){
+  renderHeader();
+  renderToday();
+  renderProgramme();
+  renderDiet();
+  renderMeasures();
+  document.getElementById('startDateInput').value = getStartDate();
+}
+
+activePhase = currentPhaseId();
+refreshAll();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
