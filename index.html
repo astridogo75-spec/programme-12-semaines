@@ -308,6 +308,8 @@
         </ul>
       </div>
 
+      <div id="homeAlert"></div>
+
       <div class="warn">
         <strong>Avant de commencer :</strong> en cas de douleur inhabituelle au genou ou à la hanche, d'essoufflement anormal, de vertiges ou de douleur thoracique, on arrête et on demande un avis médical. Avec une prothèse de genou et de l'arthrose de hanche, la progression doit rester contrôlée.
       </div>
@@ -512,14 +514,7 @@
           <div class="field"><label>Poids (kg)</label><input type="number" step="0.1" id="mWeight"></div>
           <div class="field"><label>Tour de taille (cm)</label><input type="number" step="0.5" id="mWaist"></div>
         </div>
-        <div class="grid2">
-          <div class="field"><label>Tour de hanche (cm)</label><input type="number" step="0.5" id="mHip"></div>
-          <div class="field"><label>Douleur genou/hanche (0-10)</label><input type="number" min="0" max="10" id="mPain"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Sommeil (1-5)</label><input type="number" min="1" max="5" id="mSleep"></div>
-          <div class="field"><label>Énergie entraînement (1-5)</label><input type="number" min="1" max="5" id="mEnergy"></div>
-        </div>
+        <div class="field"><label>Tour de hanche (cm)</label><input type="number" step="0.5" id="mHip"></div>
         <button class="btn" onclick="saveMeasure()">Enregistrer</button>
         <button class="btn outline" style="margin-top:8px;" onclick="closeMeasureForm()">Annuler</button>
       </div>
@@ -527,6 +522,23 @@
       <div class="card">
         <h3>Historique</h3>
         <div id="measureHistory"></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0;">Récupération du jour</h3>
+          <span class="badge" id="recoveryScoreBadge" style="background:var(--accent-light);color:var(--accent);border-color:transparent;"></span>
+        </div>
+        <p class="muted">À noter chaque jour — sert à calculer ton score de récupération et à détecter une douleur à surveiller.</p>
+        <div class="grid2" style="margin-top:8px;">
+          <div class="field"><label>Sommeil (1 = mauvais, 5 = excellent)</label><input type="number" min="1" max="5" id="rSleep" onchange="saveRecovery()"></div>
+          <div class="field"><label>Énergie (1 = épuisée, 5 = pleine forme)</label><input type="number" min="1" max="5" id="rEnergy" onchange="saveRecovery()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Douleur genou (0-10)</label><input type="number" min="0" max="10" id="rKnee" onchange="saveRecovery()"></div>
+          <div class="field"><label>Douleur hanche (0-10)</label><input type="number" min="0" max="10" id="rHip" onchange="saveRecovery()"></div>
+        </div>
+        <div id="recoveryAlert"></div>
       </div>
 
       <div class="card">
@@ -674,6 +686,29 @@ function estimateKcal(met, minutes, weight){
   return Math.round(met * (weight||getRefWeight()) * (minutes/60));
 }
 
+const MOTIVATIONS = [
+  "Aujourd'hui, l'objectif est la régularité, pas la performance.",
+  "2 à 3 répétitions en réserve : on construit, on ne s'épuise pas.",
+  "Le tour de taille et les photos comptent plus que le chiffre sur la balance.",
+  "Pas de douleur articulaire : la fatigue musculaire oui, la douleur genou/hanche non.",
+  "Une séance plus courte mais bien faite vaut mieux qu'une séance forcée.",
+  "Le sommeil fait partie de l'entraînement — il prépare la séance suivante.",
+  "Chaque semaine compte : les résultats viennent de l'accumulation, pas d'un seul jour.",
+  "Si le corps demande une pause, la pause fait partie du programme.",
+  "Boire de l'eau régulièrement aide la récupération autant que les étirements.",
+  "On ne 'rattrape' pas une mauvaise nuit en poussant plus fort à la séance.",
+  "Mouvement lent et contrôlé : c'est la qualité du geste qui dessine le résultat.",
+  "Une sèche douce et durable vaut mieux qu'une privation brutale.",
+];
+function dayOfYear(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(),0,0);
+  return Math.floor((now - start) / 86400000);
+}
+function todaysMotivation(){
+  return MOTIVATIONS[dayOfYear() % MOTIVATIONS.length];
+}
+
 const SCHEDULE = [
   {day:"Lundi", titleKey:"s1"},
   {day:"Mardi", titleKey:"s2"},
@@ -790,6 +825,7 @@ const LS_WATER = "p12_water"; // {date: ml}
 const LS_WATER_TARGET = "p12_waterTarget";
 const LS_BURNED = "p12_burned"; // {date: [{id, label, kcal, duration, source}]}
 const LS_SESSIONDONE = "p12_sessiondone"; // {date: {sessionKey, doneIdx:[bool], finished:bool}}
+const LS_RECOVERY = "p12_recovery"; // {date: {sleep, energy, knee, hip}}
 
 function getWaterTarget(){
   const v = localStorage.getItem(LS_WATER_TARGET);
@@ -1025,14 +1061,25 @@ function renderToday(){
   const session = phase.sessions[key];
   const dayName = SCHEDULE.find(d=>d.titleKey===key).day;
   let html = `<p style="margin-bottom:2px;"><strong>${dayName}</strong> — ${session.title}</p>`;
-  if(session.objectif) html += `<p class="muted">${session.objectif}</p>`;
+  if(session.objectif) html += `<p class="muted" style="margin-bottom:8px;"><strong style="color:var(--accent);">Objectif du jour :</strong> ${session.objectif}</p>`;
   if(session.type!=='repos'){
     const state = getTodaySessionState(key);
     if(state.finished){
       html += `<p style="color:var(--accent);font-weight:700;margin-top:4px;">✓ Séance terminée — ${state.kcal} kcal brûlées</p>`;
     }
   }
+  const rec = getTodayRecovery();
+  const score = computeRecoveryScore(rec);
+  const lbl = recoveryLabel(score);
+  if(lbl){
+    html += `<div class="row-between" style="margin-top:8px;"><span class="muted" style="font-size:12.5px;">Récupération du jour</span><span class="badge" style="background:var(--accent-light);color:${lbl.color};border-color:transparent;font-size:11.5px;padding:4px 10px;">${score}/100 · ${lbl.text}</span></div>`;
+  }
+  html += `<p class="muted" style="margin-top:10px;font-style:italic;">"${todaysMotivation()}"</p>`;
   document.getElementById('todayContent').innerHTML = html;
+
+  // alerte douleur en haut de l'accueil
+  const homeAlertEl = document.getElementById('homeAlert');
+  if(homeAlertEl) homeAlertEl.innerHTML = painAlert(rec);
 }
 
 function saveStartDate(){
@@ -1509,15 +1556,12 @@ function saveMeasure(){
     weight: document.getElementById('mWeight').value,
     waist: document.getElementById('mWaist').value,
     hip: document.getElementById('mHip').value,
-    pain: document.getElementById('mPain').value,
-    sleep: document.getElementById('mSleep').value,
-    energy: document.getElementById('mEnergy').value,
   };
   const arr = getMeasures();
   arr.push(entry);
   arr.sort((a,b)=> a.date < b.date ? 1 : -1);
   setMeasures(arr);
-  ['mWeight','mWaist','mHip','mPain','mSleep','mEnergy'].forEach(id=>document.getElementById(id).value='');
+  ['mWeight','mWaist','mHip'].forEach(id=>document.getElementById(id).value='');
   closeMeasureForm();
   renderMeasures();
 }
@@ -1528,9 +1572,71 @@ function renderMeasures(){
     wrap.innerHTML = `<div class="empty">Aucune mesure enregistrée pour l'instant.</div>`;
     return;
   }
-  wrap.innerHTML = `<table class="measures"><tr><th>Date</th><th>Poids</th><th>Taille</th><th>Hanche</th><th>Douleur</th></tr>` +
-    arr.map(e=>`<tr><td>${e.date}</td><td>${e.weight||'—'}${e.weight?' kg':''}</td><td>${e.waist||'—'}${e.waist?' cm':''}</td><td>${e.hip||'—'}${e.hip?' cm':''}</td><td>${e.pain||'—'}</td></tr>`).join('') +
+  wrap.innerHTML = `<table class="measures"><tr><th>Date</th><th>Poids</th><th>Taille</th><th>Hanche</th></tr>` +
+    arr.map(e=>`<tr><td>${e.date}</td><td>${e.weight||'—'}${e.weight?' kg':''}</td><td>${e.waist||'—'}${e.waist?' cm':''}</td><td>${e.hip||'—'}${e.hip?' cm':''}</td></tr>`).join('') +
     `</table>`;
+}
+
+/* ============== RÉCUPÉRATION ============== */
+
+function getRecoveryStore(){
+  return JSON.parse(localStorage.getItem(LS_RECOVERY) || "{}");
+}
+function setRecoveryStore(s){
+  localStorage.setItem(LS_RECOVERY, JSON.stringify(s));
+}
+function getTodayRecovery(){
+  const store = getRecoveryStore();
+  return store[todayISO()] || {sleep:'', energy:'', knee:'', hip:''};
+}
+function saveRecovery(){
+  const date = todayISO();
+  const store = getRecoveryStore();
+  store[date] = {
+    sleep: document.getElementById('rSleep').value,
+    energy: document.getElementById('rEnergy').value,
+    knee: document.getElementById('rKnee').value,
+    hip: document.getElementById('rHip').value,
+  };
+  setRecoveryStore(store);
+  renderRecovery();
+  renderToday();
+}
+function computeRecoveryScore(rec){
+  if(!rec.sleep && !rec.energy) return null;
+  const sleep = Number(rec.sleep)||0, energy = Number(rec.energy)||0;
+  const count = (rec.sleep?1:0) + (rec.energy?1:0);
+  if(count===0) return null;
+  return Math.round(((sleep+energy)/(count*5))*100);
+}
+function recoveryLabel(score){
+  if(score===null) return null;
+  if(score>=70) return {text:"Bonne récupération", color:"var(--accent)"};
+  if(score>=40) return {text:"Récupération moyenne", color:"var(--coral)"};
+  return {text:"Récupération faible — lève le pied", color:"#c0392b"};
+}
+function painAlert(rec){
+  const knee = Number(rec.knee)||0, hip = Number(rec.hip)||0;
+  const worst = Math.max(knee, hip);
+  const joint = knee>=hip ? "genou" : "hanche";
+  if(worst>=7){
+    return `<div class="warn" style="margin-top:10px;margin-bottom:0;"><strong>Douleur importante signalée (${worst}/10, ${joint}) :</strong> on arrête et on demande un avis médical avant de poursuivre le programme.</div>`;
+  }
+  if(worst>=4){
+    return `<div class="warn" style="margin-top:10px;margin-bottom:0;background:#fff7e0;border-color:#f0d98c;color:#7a5c00;"><strong>Douleur modérée signalée (${worst}/10, ${joint}) :</strong> adapte l'intensité aujourd'hui — priorité aux exercices stables, sans impact, sans amplitude extrême.</div>`;
+  }
+  return '';
+}
+function renderRecovery(){
+  const rec = getTodayRecovery();
+  document.getElementById('rSleep').value = rec.sleep;
+  document.getElementById('rEnergy').value = rec.energy;
+  document.getElementById('rKnee').value = rec.knee;
+  document.getElementById('rHip').value = rec.hip;
+  const score = computeRecoveryScore(rec);
+  const lbl = recoveryLabel(score);
+  document.getElementById('recoveryScoreBadge').textContent = lbl ? `${score}/100 · ${lbl.text}` : 'À renseigner';
+  document.getElementById('recoveryAlert').innerHTML = painAlert(rec);
 }
 
 /* ============== INIT ============== */
@@ -1545,6 +1651,7 @@ function refreshAll(){
   renderMealJournal();
   renderMeasures();
   renderBurned();
+  renderRecovery();
   document.getElementById('startDateInput').value = getStartDate();
   document.getElementById('calorieTargetInput').value = getCalorieTarget();
   const warn = document.getElementById('calorieWarning');

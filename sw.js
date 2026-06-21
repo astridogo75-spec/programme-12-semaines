@@ -1,4 +1,4 @@
-const CACHE = "programme12-v2";
+const CACHE = "programme12-v3";
 const FILES = ["./index.html", "./manifest.json", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
