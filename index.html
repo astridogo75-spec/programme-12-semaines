@@ -390,6 +390,18 @@
 
       <div class="card">
         <div class="row-between">
+          <h3 style="margin:0;">Hydratation</h3>
+          <input type="number" id="waterTargetInput" onchange="setWaterTarget()" style="width:70px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-size:12.5px;text-align:center;">
+        </div>
+        <div id="waterSummary" style="margin-top:6px;"></div>
+        <div class="grid2" style="margin-top:10px;">
+          <button class="btn outline" onclick="addWater(-250)">- 1 verre (250 ml)</button>
+          <button class="btn" onclick="addWater(250)">+ 1 verre (250 ml)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
           <h3 style="margin:0;">Calories &amp; protéines du jour</h3>
           <button class="small-btn" onclick="openFoodForm()">+ Aliment</button>
         </div>
@@ -517,6 +529,34 @@
         <div id="measureHistory"></div>
       </div>
 
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0;">Calories brûlées</h3>
+          <button class="small-btn" onclick="openActivityForm()">+ Activité</button>
+        </div>
+        <p class="muted">Pour les séances du programme, l'estimation se fait depuis l'onglet Programme ("Terminer la séance"). Ici, ajoute tes activités libres (vélo, marche...) — tu peux corriger la valeur avec celle de ta Apple Watch.</p>
+        <div id="burnedSummary" style="margin-top:6px;"></div>
+        <div class="card" id="activityFormCard" style="display:none; box-shadow:none; border-style:dashed; margin-top:10px; margin-bottom:0;">
+          <div class="field">
+            <label>Type d'activité</label>
+            <select id="activitySelect" onchange="updateActivityPreview()"></select>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Durée (min)</label><input type="number" id="activityMinutes" oninput="updateActivityPreview()" placeholder="ex : 30"></div>
+            <div class="field"><label>Calories (modifiable)</label><input type="number" id="activityKcal"></div>
+          </div>
+          <p class="muted" style="margin-top:-4px;">Estimation automatique — remplace par la valeur de ta Apple Watch si tu l'as.</p>
+          <button class="btn" style="margin-top:8px;" onclick="addActivityEntry()">Ajouter</button>
+          <button class="btn outline" style="margin-top:8px;" onclick="closeActivityForm()">Annuler</button>
+        </div>
+        <div id="burnedLog" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Historique calories brûlées (7 jours)</h3>
+        <div id="burnedHistory"></div>
+      </div>
+
     </section>
 
   </main>
@@ -560,6 +600,10 @@
     <div class="sheet-item" onclick="quickAdd('measure')">
       <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg></div>
       Ajouter une mesure
+    </div>
+    <div class="sheet-item" onclick="quickAdd('activity')">
+      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></div>
+      Ajouter une activité (vélo, marche...)
     </div>
   </div>
 </div>
@@ -618,6 +662,17 @@ const EXO = {
 };
 
 function ex(key, sets, reps){ return {name: EXO[key].n, video: EXO[key].v, sets, reps}; }
+
+// estimation calories brûlées (approximative) : kcal = MET x poids(kg) x durée(h)
+const SESSION_MET = {muscu: 4, cardio: 5.5, repos: 0};
+const SESSION_DURATION_MIN = {muscu: 50, cardio: 40, repos: 0};
+const ACTIVITY_MET = {
+  "Vélo modéré": 6, "Vélo soutenu": 8, "Marche": 3.5, "Marche rapide": 4.5,
+  "Elliptique": 5, "Rameur": 4.5, "Natation / aquagym": 5.5, "Musculation libre": 4, "Autre": 4,
+};
+function estimateKcal(met, minutes, weight){
+  return Math.round(met * (weight||getRefWeight()) * (minutes/60));
+}
 
 const SCHEDULE = [
   {day:"Lundi", titleKey:"s1"},
@@ -731,6 +786,173 @@ const LS_MEASURES = "p12_measures"; // array
 const LS_CALTARGET = "p12_calTarget";
 const LS_FOODLOG = "p12_foodlog"; // {date: [{food, grams, kcal, protein}]}
 const LS_MEALS = "p12_meals"; // array of {id, date, time, photo, groups, feedback}
+const LS_WATER = "p12_water"; // {date: ml}
+const LS_WATER_TARGET = "p12_waterTarget";
+const LS_BURNED = "p12_burned"; // {date: [{id, label, kcal, duration, source}]}
+const LS_SESSIONDONE = "p12_sessiondone"; // {date: {sessionKey, doneIdx:[bool], finished:bool}}
+
+function getWaterTarget(){
+  const v = localStorage.getItem(LS_WATER_TARGET);
+  return v ? Number(v) : 1500;
+}
+function getRefWeight(){
+  const arr = getMeasures ? getMeasures() : [];
+  const withWeight = (arr||[]).filter(m=>m.weight).sort((a,b)=> a.date < b.date ? 1 : -1);
+  return withWeight.length ? Number(withWeight[0].weight) : 70;
+}
+
+/* ============== SÉANCE TERMINÉE / EXERCICES FAITS ============== */
+
+function getSessionDoneStore(){
+  return JSON.parse(localStorage.getItem(LS_SESSIONDONE) || "{}");
+}
+function setSessionDoneStore(s){
+  localStorage.setItem(LS_SESSIONDONE, JSON.stringify(s));
+}
+function getTodaySessionState(sessionKey){
+  const store = getSessionDoneStore();
+  const date = todayISO();
+  const rec = (store[date] && store[date][sessionKey]) || {doneIdx:[], finished:false, kcal:0};
+  return rec;
+}
+function toggleExerciseDone(sessionKey, idx){
+  const date = todayISO();
+  const store = getSessionDoneStore();
+  if(!store[date]) store[date] = {};
+  if(!store[date][sessionKey]) store[date][sessionKey] = {doneIdx:[], finished:false, kcal:0};
+  store[date][sessionKey].doneIdx[idx] = !store[date][sessionKey].doneIdx[idx];
+  setSessionDoneStore(store);
+  renderProgramme();
+  renderToday();
+}
+function openFinishSession(sessionKey, type){
+  const est = estimateKcal(SESSION_MET[type], SESSION_DURATION_MIN[type]);
+  const val = prompt(`Calories brûlées estimées pour cette séance (modifiable, par ex. depuis ta Apple Watch) :`, est);
+  if(val===null) return;
+  const kcal = Math.max(0, Math.round(Number(val)||0));
+  const date = todayISO();
+  const store = getSessionDoneStore();
+  if(!store[date]) store[date] = {};
+  if(!store[date][sessionKey]) store[date][sessionKey] = {doneIdx:[], finished:false, kcal:0};
+  store[date][sessionKey].finished = true;
+  store[date][sessionKey].kcal = kcal;
+  setSessionDoneStore(store);
+
+  const burned = getBurnedLog();
+  if(!burned[date]) burned[date] = [];
+  burned[date] = burned[date].filter(b=>b.source!=='session-'+sessionKey);
+  burned[date].push({id:Date.now(), label:"Séance du programme", kcal, duration:SESSION_DURATION_MIN[type], source:'session-'+sessionKey});
+  setBurnedLog(burned);
+
+  renderProgramme();
+  renderToday();
+  renderCalories();
+  renderBurned();
+}
+function unfinishSession(sessionKey){
+  const date = todayISO();
+  const store = getSessionDoneStore();
+  if(store[date] && store[date][sessionKey]){
+    store[date][sessionKey].finished = false;
+    store[date][sessionKey].kcal = 0;
+    setSessionDoneStore(store);
+  }
+  const burned = getBurnedLog();
+  if(burned[date]) burned[date] = burned[date].filter(b=>b.source!=='session-'+sessionKey);
+  setBurnedLog(burned);
+  renderProgramme();
+  renderToday();
+  renderCalories();
+  renderBurned();
+}
+
+/* ============== ACTIVITÉS LIBRES / CALORIES BRÛLÉES ============== */
+
+function getBurnedLog(){
+  return JSON.parse(localStorage.getItem(LS_BURNED) || "{}");
+}
+function setBurnedLog(s){
+  localStorage.setItem(LS_BURNED, JSON.stringify(s));
+}
+function openActivityForm(){
+  document.getElementById('activityFormCard').style.display = 'block';
+  populateActivitySelect();
+}
+function closeActivityForm(){
+  document.getElementById('activityFormCard').style.display = 'none';
+}
+function populateActivitySelect(){
+  const sel = document.getElementById('activitySelect');
+  sel.innerHTML = Object.keys(ACTIVITY_MET).map(a=>`<option value="${a}">${a}</option>`).join('');
+  updateActivityPreview();
+}
+function updateActivityPreview(){
+  const type = document.getElementById('activitySelect').value;
+  const minutes = Number(document.getElementById('activityMinutes').value) || 30;
+  const est = estimateKcal(ACTIVITY_MET[type], minutes);
+  document.getElementById('activityKcal').value = est;
+}
+function addActivityEntry(){
+  const type = document.getElementById('activitySelect').value;
+  const minutes = Number(document.getElementById('activityMinutes').value) || 30;
+  const kcal = Math.max(0, Math.round(Number(document.getElementById('activityKcal').value) || 0));
+  const date = todayISO();
+  const log = getBurnedLog();
+  if(!log[date]) log[date] = [];
+  log[date].push({id:Date.now(), label:type, kcal, duration:minutes, source:'activity'});
+  setBurnedLog(log);
+  closeActivityForm();
+  document.getElementById('activityMinutes').value = '';
+  renderBurned();
+  renderCalories();
+}
+function removeBurnedEntry(id){
+  const date = todayISO();
+  const log = getBurnedLog();
+  if(log[date]){
+    log[date] = log[date].filter(e=>e.id!==id);
+    setBurnedLog(log);
+    renderBurned();
+    renderCalories();
+  }
+}
+function getBurnedTotal(date){
+  const log = getBurnedLog();
+  return (log[date]||[]).reduce((s,e)=>s+e.kcal,0);
+}
+function renderBurned(){
+  const summaryEl = document.getElementById('burnedSummary');
+  if(!summaryEl) return;
+  const date = todayISO();
+  const total = getBurnedTotal(date);
+  summaryEl.innerHTML = `<div class="row-between"><span class="muted">Brûlées aujourd'hui</span><span><strong>${total}</strong> kcal</span></div>`;
+
+  const log = getBurnedLog();
+  const entries = log[date] || [];
+  const listEl = document.getElementById('burnedLog');
+  if(entries.length===0){
+    listEl.innerHTML = `<div class="empty">Aucune calorie brûlée enregistrée aujourd'hui.</div>`;
+  } else {
+    listEl.innerHTML = entries.map(e=>`
+      <div class="check-row"><span>${e.label} ${e.duration?`<span class="muted">(${e.duration} min)</span>`:''} — <strong>${e.kcal} kcal</strong></span>
+      <button class="small-btn" onclick="removeBurnedEntry(${e.id})" style="background:var(--coral-light);color:var(--coral);">Suppr.</button></div>
+    `).join('');
+  }
+
+  // historique 7 derniers jours
+  const histEl = document.getElementById('burnedHistory');
+  if(histEl){
+    let rows = '';
+    for(let i=6;i>=0;i--){
+      const d = new Date();
+      d.setDate(d.getDate()-i);
+      const iso = d.toISOString().slice(0,10);
+      const t = getBurnedTotal(iso);
+      rows += `<tr><td>${d.toLocaleDateString('fr-FR',{weekday:'short', day:'numeric', month:'short'})}</td><td>${t} kcal</td></tr>`;
+    }
+    histEl.innerHTML = `<table class="measures">${rows}</table>`;
+  }
+}
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function getCalorieTarget(){
@@ -782,6 +1004,7 @@ function quickAdd(type){
   if(type==='food'){ showTab('diete'); openFoodForm(); }
   if(type==='meal'){ showTab('diete'); openMealForm(); }
   if(type==='measure'){ showTab('suivi'); openMeasureForm(); }
+  if(type==='activity'){ showTab('suivi'); openActivityForm(); }
 }
 
 /* ============== RENDER : ACCUEIL ============== */
@@ -803,6 +1026,12 @@ function renderToday(){
   const dayName = SCHEDULE.find(d=>d.titleKey===key).day;
   let html = `<p style="margin-bottom:2px;"><strong>${dayName}</strong> — ${session.title}</p>`;
   if(session.objectif) html += `<p class="muted">${session.objectif}</p>`;
+  if(session.type!=='repos'){
+    const state = getTodaySessionState(key);
+    if(state.finished){
+      html += `<p style="color:var(--accent);font-weight:700;margin-top:4px;">✓ Séance terminée — ${state.kcal} kcal brûlées</p>`;
+    }
+  }
   document.getElementById('todayContent').innerHTML = html;
 }
 
@@ -847,11 +1076,16 @@ function renderProgramme(){
   wrap.innerHTML = SCHEDULE.map(d=>{
     const s = phase.sessions[d.titleKey];
     const isToday = d.titleKey === todayKey;
+    const sessionState = isToday ? getTodaySessionState(d.titleKey) : null;
     let body = '';
     if(s.warmup) body += `<p class="muted"><strong>Échauffement :</strong> ${s.warmup}</p>`;
     if(s.exercises){
-      body += `<table class="exo"><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th></th></tr>` +
-        s.exercises.map(e=>`<tr><td class="exo-name">${e.name}</td><td>${e.sets}</td><td>${e.reps}</td><td><button class="demo-btn" onclick='openVideo("${e.video}", ${JSON.stringify(e.name)})'>Démo</button></td></tr>`).join('') +
+      body += `<table class="exo"><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th></th>${isToday?'<th></th>':''}</tr>` +
+        s.exercises.map((e,i)=>{
+          const done = isToday && sessionState.doneIdx[i];
+          const checkbox = isToday ? `<td><div class="toggle ${done?'on':''}" style="width:38px;height:22px;" onclick="toggleExerciseDone('${d.titleKey}', ${i})"><div class="knob" style="width:16px;height:16px;"></div></div></td>` : '';
+          return `<tr><td class="exo-name">${e.name}</td><td>${e.sets}</td><td>${e.reps}</td><td><button class="demo-btn" onclick='openVideo("${e.video}", ${JSON.stringify(e.name)})'>Démo</button></td>${checkbox}</tr>`;
+        }).join('') +
         `</table>`;
     }
     if(s.cardio) body += `<p class="muted" style="margin-top:8px;"><strong>Cardio :</strong> ${s.cardio}</p>`;
@@ -862,9 +1096,21 @@ function renderProgramme(){
     if(s.avoid) body += `<p class="muted" style="margin-top:8px;color:#8a3c25;">${s.avoid}</p>`;
     if(s.type==='repos' && s.details) body = `<p class="muted">${s.details}</p>`;
 
+    if(isToday && s.type!=='repos'){
+      if(sessionState.finished){
+        body += `<div class="row-between" style="margin-top:12px;background:var(--mint-light);border-radius:12px;padding:10px 12px;">
+          <span style="font-weight:700;color:var(--accent);">✓ Séance terminée — ${sessionState.kcal} kcal</span>
+          <button class="small-btn" onclick="unfinishSession('${d.titleKey}')" style="background:var(--coral-light);color:var(--coral);">Annuler</button>
+        </div>`;
+      } else {
+        body += `<button class="btn" style="margin-top:12px;" onclick="openFinishSession('${d.titleKey}','${s.type}')">Terminer la séance</button>`;
+      }
+    }
+
+    const finishedBadge = (isToday && sessionState && sessionState.finished) ? ` <span style="color:var(--accent);">✓</span>` : '';
     return `<div class="day-card" id="day-${d.titleKey}">
       <div class="day-head ${isToday?'today':''}" onclick="toggleDay('${d.titleKey}')">
-        <div><div class="d">${d.day}${isToday?" · aujourd'hui":''}</div><div class="o">${s.title} — ${s.objectif||''}</div></div>
+        <div><div class="d">${d.day}${isToday?" · aujourd'hui":''}${finishedBadge}</div><div class="o">${s.title} — ${s.objectif||''}</div></div>
         <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </div>
       <div class="day-body">${body}</div>
@@ -901,7 +1147,6 @@ const DIET_ITEMS = [
   {key:"collation", label:"Collation pré-sport (si séance)"},
   {key:"diner", label:"Dîner équilibré"},
   {key:"proteines", label:"Objectif protéines atteint"},
-  {key:"eau", label:"Hydratation suffisante"},
 ];
 
 function getDietStore(){
@@ -948,6 +1193,35 @@ function toggleDiet(key, el){
   renderDiet();
 }
 
+/* ============== HYDRATATION ============== */
+
+function getWaterLog(){
+  return JSON.parse(localStorage.getItem(LS_WATER) || "{}");
+}
+function setWaterTarget(){
+  const v = Number(document.getElementById('waterTargetInput').value);
+  if(v>0){ localStorage.setItem(LS_WATER_TARGET, v); renderWater(); }
+}
+function addWater(ml){
+  const date = todayISO();
+  const log = getWaterLog();
+  log[date] = Math.max(0, (log[date]||0) + ml);
+  localStorage.setItem(LS_WATER, JSON.stringify(log));
+  renderWater();
+}
+function renderWater(){
+  const date = todayISO();
+  const log = getWaterLog();
+  const total = log[date] || 0;
+  const target = getWaterTarget();
+  const pct = Math.min(100, Math.round(total/target*100));
+  document.getElementById('waterTargetInput').value = target;
+  document.getElementById('waterSummary').innerHTML = `
+    <div class="row-between"><span class="muted">Aujourd'hui</span><span><strong>${(total/1000).toFixed(2)}</strong> L / ${(target/1000).toFixed(1)} L</span></div>
+    <div class="macro-bar"><div style="background:#5aa9e6;width:${pct}%;"></div></div>
+  `;
+}
+
 /* ============== ALIMENTS / CALORIES ============== */
 
 // valeurs nutritionnelles approximatives pour 100 g (aliments du plan diète)
@@ -978,6 +1252,16 @@ const FOOD_DB = [
   {cat:"Lipides", name:"Avocat", kcal:160, protein:2, portion:80},
   {cat:"Lipides", name:"Amandes / noix", kcal:600, protein:20, portion:20},
   {cat:"Lipides", name:"Graines de chia ou de lin", kcal:480, protein:17, portion:15},
+  {cat:"Légumes", name:"Haricots verts (cuits)", kcal:31, protein:1.8, portion:150},
+  {cat:"Légumes", name:"Brocoli (cuit)", kcal:35, protein:2.4, portion:150},
+  {cat:"Légumes", name:"Courgette (cuite)", kcal:17, protein:1.2, portion:150},
+  {cat:"Légumes", name:"Concombre", kcal:15, protein:0.7, portion:100},
+  {cat:"Légumes", name:"Tomate", kcal:18, protein:0.9, portion:100},
+  {cat:"Légumes", name:"Salade verte", kcal:15, protein:1.4, portion:60},
+  {cat:"Légumes", name:"Carotte (cuite)", kcal:35, protein:0.8, portion:100},
+  {cat:"Légumes", name:"Épinards (cuits)", kcal:23, protein:2.9, portion:150},
+  {cat:"Légumes", name:"Poivron", kcal:20, protein:1, portion:100},
+  {cat:"Légumes", name:"Chou-fleur (cuit)", kcal:23, protein:1.8, portion:150},
 ];
 
 function getFoodLog(){
@@ -1059,10 +1343,12 @@ function renderCalories(){
   const totalKcal = entries.reduce((s,e)=>s+e.kcal,0);
   const totalProtein = Math.round(entries.reduce((s,e)=>s+e.protein,0)*10)/10;
   const target = getCalorieTarget();
-  const pct = Math.round(totalKcal/target*100);
-  const over = totalKcal > target;
-  const remaining = Math.abs(target - totalKcal);
-  const ringColor = over ? 'var(--coral)'.replace('var(--coral)','#e76f51') : '#1f6f63';
+  const burned = getBurnedTotal(date);
+  const netTarget = target + burned;
+  const pct = Math.round(totalKcal/netTarget*100);
+  const over = totalKcal > netTarget;
+  const remaining = Math.abs(netTarget - totalKcal);
+  const ringColor = over ? '#e76f51' : '#1f6f63';
   const proteinPct = Math.min(100, Math.round(totalProtein/120*100));
 
   document.getElementById('calorieSummary').innerHTML = `
@@ -1075,8 +1361,8 @@ function renderCalories(){
         </div>
       </div>
       <div style="flex:1;">
-        <div class="muted" style="font-size:12px;">Consommé aujourd'hui</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:10px;">${totalKcal} <span class="muted" style="font-weight:600;font-size:12.5px;">/ ${target} kcal</span></div>
+        <div class="muted" style="font-size:12px;">Objectif ${target} kcal ${burned>0?`+ ${burned} brûlées`:''}</div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:10px;">${totalKcal} <span class="muted" style="font-weight:600;font-size:12.5px;">consommées / ${netTarget} kcal</span></div>
         <div class="muted" style="font-size:12px;">Protéines</div>
         <div style="font-weight:800;font-size:16px;">${totalProtein} g <span class="muted" style="font-weight:600;font-size:12.5px;">/ 110-130 g</span></div>
         <div class="macro-bar"><div style="background:var(--mint);width:${proteinPct}%;"></div></div>
@@ -1254,9 +1540,11 @@ function refreshAll(){
   renderToday();
   renderProgramme();
   renderDiet();
+  renderWater();
   renderCalories();
   renderMealJournal();
   renderMeasures();
+  renderBurned();
   document.getElementById('startDateInput').value = getStartDate();
   document.getElementById('calorieTargetInput').value = getCalorieTarget();
   const warn = document.getElementById('calorieWarning');
