@@ -466,32 +466,17 @@
       </div>
 
       <div class="card">
-        <div class="row-between">
-          <h3 style="margin:0;">Calories &amp; protéines du jour</h3>
-          <button class="small-btn" onclick="openFoodForm()">+ Aliment</button>
-        </div>
+        <h3>Résumé du jour</h3>
+        <p class="muted" style="font-size:12.5px;margin-bottom:6px;">Calculé automatiquement depuis tes repas enregistrés.</p>
         <div id="calorieSummary"></div>
-        <div class="card" id="foodFormCard" style="display:none; box-shadow:none; border-style:dashed; margin-top:10px; margin-bottom:0;">
-          <div class="field">
-            <label>Aliment</label>
-            <select id="foodSelect" onchange="updateFoodPreview()"></select>
-          </div>
-          <div class="grid2">
-            <div class="field"><label>Quantité (g)</label><input type="number" id="foodGrams" oninput="updateFoodPreview()"></div>
-            <div class="field"><label>Aperçu</label><input type="text" id="foodPreview" disabled></div>
-          </div>
-          <button class="btn" onclick="addFoodEntry()">Ajouter</button>
-          <button class="btn outline" style="margin-top:8px;" onclick="closeFoodForm()">Annuler</button>
-        </div>
-        <div id="foodLog" style="margin-top:10px;"></div>
       </div>
 
       <div class="card">
         <div class="row-between">
-          <h3 style="margin:0;">Journal repas (photo)</h3>
+          <h3 style="margin:0;">Journal repas</h3>
           <button class="small-btn" onclick="openMealForm()">+ Repas</button>
         </div>
-        <p class="muted">Photo, type, contexte, ingrédients, ressenti — score bienveillant et analyse automatique.</p>
+        <p class="muted" style="font-size:12.5px;">Photo, aliments, macros, ressenti — score et analyse automatique.</p>
         <div id="mealFormCard" style="display:none;margin-top:12px;border:1.5px dashed var(--border);border-radius:16px;padding:14px;"></div>
         <div id="mealJournal" style="margin-top:10px;"></div>
       </div>
@@ -678,13 +663,9 @@
 <div class="sheet-bg" id="quickAddSheet" onclick="if(event.target===this)closeQuickAdd()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-item" onclick="quickAdd('food')">
-      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3v8a3 3 0 003 3v7M7 3v6M11 3v6M15 3c-1.5 2-2 4-2 6 0 2 1 3 2 3v9"/></svg></div>
-      Ajouter un aliment
-    </div>
     <div class="sheet-item" onclick="quickAdd('meal')">
       <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
-      Prendre en photo un repas
+      Ajouter un repas
     </div>
     <div class="sheet-item" onclick="quickAdd('measure')">
       <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg></div>
@@ -1466,48 +1447,7 @@ function ringSVG(pct, color){
   </svg>`;
 }
 function renderCalories(){
-  const date = todayISO();
-  const log = getFoodLog();
-  const entries = log[date] || [];
-  const totalKcal = entries.reduce((s,e)=>s+e.kcal,0);
-  const totalProtein = Math.round(entries.reduce((s,e)=>s+e.protein,0)*10)/10;
-  const target = getCalorieTarget();
-  const burned = getBurnedTotal(date);
-  const netTarget = target + burned;
-  const pct = Math.round(totalKcal/netTarget*100);
-  const over = totalKcal > netTarget;
-  const remaining = Math.abs(netTarget - totalKcal);
-  const ringColor = over ? '#e76f51' : '#1f6f63';
-  const proteinPct = Math.min(100, Math.round(totalProtein/120*100));
-
-  document.getElementById('calorieSummary').innerHTML = `
-    <div style="display:flex;align-items:center;gap:18px;margin-top:6px;">
-      <div class="ring-wrap">
-        ${ringSVG(pct, ringColor)}
-        <div class="ring-center">
-          <div class="big">${remaining}</div>
-          <div class="lbl">kcal ${over ? 'dépassé' : 'restant'}</div>
-        </div>
-      </div>
-      <div style="flex:1;">
-        <div class="muted" style="font-size:12px;">Objectif ${target} kcal ${burned>0?`+ ${burned} brûlées`:''}</div>
-        <div style="font-weight:800;font-size:16px;margin-bottom:10px;">${totalKcal} <span class="muted" style="font-weight:600;font-size:12.5px;">consommées / ${netTarget} kcal</span></div>
-        <div class="muted" style="font-size:12px;">Protéines</div>
-        <div style="font-weight:800;font-size:16px;">${totalProtein} g <span class="muted" style="font-weight:600;font-size:12.5px;">/ 110-130 g</span></div>
-        <div class="macro-bar"><div style="background:var(--mint);width:${proteinPct}%;"></div></div>
-      </div>
-    </div>
-  `;
-
-  const wrap = document.getElementById('foodLog');
-  if(entries.length===0){
-    wrap.innerHTML = `<div class="empty">Aucun aliment ajouté aujourd'hui.</div>`;
-    return;
-  }
-  wrap.innerHTML = entries.map((e,i)=>`
-    <div class="check-row"><span>${e.food} — ${e.grams} g <span class="muted">(${e.kcal} kcal, ${e.protein} g prot.)</span></span>
-    <button class="small-btn" onclick="removeFoodEntry(${i})" style="background:var(--coral-light);color:var(--coral);">Suppr.</button></div>
-  `).join('');
+  recalculerSuiviDuJour(todayISO());
 }
 
 /* ============== SCANNER MON ASSIETTE ============== */
@@ -1775,6 +1715,7 @@ const MEAL_TYPES = [
   {key:'dejeuner', label:'Déjeuner'},
   {key:'collation', label:'Collation'},
   {key:'diner', label:'Dîner'},
+  {key:'plaisir', label:'Repas plaisir 🍕'},
 ];
 const MEAL_CONTEXTS = [
   {key:'avant-sport', label:'Avant sport'},
@@ -1823,8 +1764,11 @@ const MEAL_FEELINGS = [
 ];
 
 let currentMeal = null;
+let currentMealItems = []; // aliments avec kcal/protéines dans le repas en cours
+
 function resetMeal(){
   currentMeal = {type:null,context:null,proteins:[],legumes:[],feculents:[],lipides:[],fruits:[],plaisir:[],dairy:[],deviation:'aucun',feeling:null,comment:'',photo:null};
+  currentMealItems = [];
 }
 
 function getMeals(){ return JSON.parse(localStorage.getItem(LS_MEALS)||'[]'); }
@@ -1894,6 +1838,30 @@ function buildMealFormHTML(){
       style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;min-height:58px;resize:none;background:#fafbfa;color:var(--text);"></textarea>
   </div>`;
 
+  // Section aliments avec calories/protéines
+  const foodOptions = FOOD_DB.map(f=>`<option value="${f.name}" data-kcal="${f.kcal}" data-prot="${f.protein}" data-portion="${f.portion}">${f.name}</option>`).join('');
+  h += `<div class="field" style="margin-top:10px;">
+    <label style="font-size:13px;font-weight:700;color:var(--accent);">🔢 Aliments & macros (facultatif)</label>
+    <div style="display:flex;gap:6px;margin-top:6px;margin-bottom:6px;">
+      <select id="mealFoodSelect" onchange="updateMealFoodSelect()" style="flex:2;border:1px solid var(--border);border-radius:10px;padding:8px 6px;font-size:12.5px;background:#fafbfa;">
+        <option value="">-- Choisir un aliment --</option>
+        ${foodOptions}
+        <option value="__libre__">✏️ Autre (saisie libre)</option>
+      </select>
+      <input type="number" id="mealFoodGrams" placeholder="g" oninput="updateMealItemPreview()" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;text-align:center;min-width:52px;">
+    </div>
+    <div id="mealFoodLibre" style="display:none;margin-bottom:8px;">
+      <input type="text" id="mealFoodName" placeholder="Nom de l'aliment" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;margin-bottom:6px;">
+      <div style="display:flex;gap:6px;">
+        <input type="number" id="mealFoodKcalLibre" placeholder="kcal" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;text-align:center;">
+        <input type="number" id="mealFoodProtLibre" placeholder="prot (g)" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;text-align:center;">
+      </div>
+    </div>
+    <div id="mealFoodPreview" style="font-size:12px;color:var(--muted);min-height:16px;margin-bottom:6px;"></div>
+    <button class="btn outline" type="button" onclick="addMealFoodItem()" style="width:100%;margin-bottom:8px;font-size:13px;">+ Ajouter cet aliment au repas</button>
+    <div id="mealItemsList"></div>
+  </div>`;
+
   // Score preview (mis à jour en temps réel)
   h += `<div id="mealScorePreview"></div>`;
 
@@ -1904,6 +1872,151 @@ function buildMealFormHTML(){
   </div>`;
 
   return h;
+}
+
+/* ---- Gestion aliments dans le formulaire de repas ---- */
+
+function updateMealFoodSelect(){
+  const sel = document.getElementById('mealFoodSelect');
+  const libre = document.getElementById('mealFoodLibre');
+  if(!sel || !libre) return;
+  libre.style.display = sel.value === '__libre__' ? 'block' : 'none';
+  updateMealItemPreview();
+}
+
+function updateMealItemPreview(){
+  const sel = document.getElementById('mealFoodSelect');
+  const preview = document.getElementById('mealFoodPreview');
+  if(!sel || !preview) return;
+  if(!sel.value || sel.value === '__libre__'){ preview.textContent = ''; return; }
+  const food = FOOD_DB.find(f=>f.name===sel.value);
+  if(!food){ preview.textContent = ''; return; }
+  const grams = Number(document.getElementById('mealFoodGrams').value) || food.portion;
+  const kcal = Math.round(food.kcal * grams / 100);
+  const prot = Math.round(food.protein * grams / 100 * 10) / 10;
+  preview.textContent = `→ ${kcal} kcal · ${prot} g protéines pour ${grams} g`;
+}
+
+function addMealFoodItem(){
+  const sel = document.getElementById('mealFoodSelect');
+  if(!sel) return;
+  let item;
+  if(sel.value === '__libre__'){
+    const name = (document.getElementById('mealFoodName')||{value:''}).value.trim() || 'Aliment';
+    const kcal = Number((document.getElementById('mealFoodKcalLibre')||{value:0}).value) || 0;
+    const prot = Number((document.getElementById('mealFoodProtLibre')||{value:0}).value) || 0;
+    item = {name, grams:null, kcal, prot, libre:true};
+    if(document.getElementById('mealFoodName')) document.getElementById('mealFoodName').value = '';
+    if(document.getElementById('mealFoodKcalLibre')) document.getElementById('mealFoodKcalLibre').value = '';
+    if(document.getElementById('mealFoodProtLibre')) document.getElementById('mealFoodProtLibre').value = '';
+  } else if(sel.value){
+    const food = FOOD_DB.find(f=>f.name===sel.value);
+    if(!food) return;
+    const grams = Number(document.getElementById('mealFoodGrams').value) || food.portion;
+    const kcal = Math.round(food.kcal * grams / 100);
+    const prot = Math.round(food.protein * grams / 100 * 10) / 10;
+    item = {name:food.name, grams, kcal, prot, libre:false};
+  } else return;
+  currentMealItems.push(item);
+  renderMealItemsList();
+  updateMealScore();
+  sel.value = '';
+  const gramsEl = document.getElementById('mealFoodGrams');
+  if(gramsEl) gramsEl.value = '';
+  const preview = document.getElementById('mealFoodPreview');
+  if(preview) preview.textContent = '';
+  const libre = document.getElementById('mealFoodLibre');
+  if(libre) libre.style.display = 'none';
+}
+
+function removeMealFoodItem(idx){
+  currentMealItems.splice(idx,1);
+  renderMealItemsList();
+  updateMealScore();
+}
+
+function renderMealItemsList(){
+  const wrap = document.getElementById('mealItemsList');
+  if(!wrap) return;
+  if(currentMealItems.length === 0){ wrap.innerHTML = ''; return; }
+  const totalKcal = currentMealItems.reduce((s,i)=>s+i.kcal,0);
+  const totalProt = Math.round(currentMealItems.reduce((s,i)=>s+i.prot,0)*10)/10;
+  wrap.innerHTML = currentMealItems.map((it,i)=>`
+    <div class="scan-item">
+      <div>
+        <div class="scan-name">${it.name}${it.grams?` (${it.grams} g)`:''}</div>
+        <div class="scan-meta">${it.kcal} kcal · ${it.prot} g prot.</div>
+      </div>
+      <button class="small-btn" style="background:var(--coral-light);color:var(--coral);" onclick="removeMealFoodItem(${i})">✕</button>
+    </div>
+  `).join('') +
+  `<div class="scan-total-bar" style="margin-top:8px;"><strong>Total repas</strong><span><strong>${totalKcal} kcal</strong> · ${totalProt} g prot.</span></div>`;
+}
+
+/* ---- recalculerSuiviDuJour ---- */
+
+function recalculerSuiviDuJour(date){
+  const meals = getMeals().filter(m=>m.date===date);
+  const totalKcal = meals.reduce((s,m)=>s+(m.totalKcal||0),0);
+  const totalProt = Math.round(meals.reduce((s,m)=>s+(m.totalProt||0),0)*10)/10;
+  const mealCount = meals.length;
+  const plaisirCount = meals.filter(m=>m.type==='plaisir'||(m.plaisir&&m.plaisir.length>0)||(m.deviation&&m.deviation!=='aucun')).length;
+  const scores = meals.filter(m=>m.score!==undefined).map(m=>m.score);
+  const avgScore = scores.length ? Math.round(scores.reduce((s,v)=>s+v,0)/scores.length*10)/10 : null;
+  const hasFruits = meals.some(m=>(m.fruits||[]).length>0);
+  const hasDairy = meals.some(m=>(m.dairy||[]).length>0);
+  const hasProteins = meals.some(m=>(m.proteins||[]).length>0||((m.dairy||[]).some(d=>DAIRY_PROTEIN_ITEMS.includes(d))));
+  const hasVeggies = meals.some(m=>(m.legumes||[]).length>0);
+
+  // Conseil automatique
+  const conseilParts = [];
+  if(mealCount===0) conseilParts.push("Enregistre ton premier repas du jour.");
+  else if(!hasProteins) conseilParts.push("Pense à ajouter une source de protéines.");
+  else if(!hasVeggies) conseilParts.push("Ajoute des légumes pour mieux satiérer.");
+  else if(plaisirCount>0) conseilParts.push("Repas plaisir enregistré — l'important c'est la semaine, pas le repas.");
+  else if(avgScore!==null && avgScore>=7) conseilParts.push("Belle journée alimentaire jusqu'ici, continue !");
+  else conseilParts.push("Continue à bien t'hydrater entre les repas.");
+  const conseil = conseilParts[0];
+
+  const target = getCalorieTarget();
+  const burned = getBurnedTotal(date);
+  const netTarget = target + burned;
+  const pct = netTarget>0 ? Math.round(totalKcal/netTarget*100) : 0;
+  const over = totalKcal > netTarget && netTarget>0;
+  const remaining = Math.abs(netTarget - totalKcal);
+  const ringColor = over ? '#e76f51' : '#1f6f63';
+  const proteinPct = Math.min(100, Math.round(totalProt/120*100));
+
+  const wrap = document.getElementById('calorieSummary');
+  if(!wrap) return;
+
+  const hasData = totalKcal>0 || totalProt>0;
+  wrap.innerHTML = hasData ? `
+    <div style="display:flex;align-items:center;gap:18px;margin-top:6px;">
+      <div class="ring-wrap">
+        ${ringSVG(pct, ringColor)}
+        <div class="ring-center">
+          <div class="big">${remaining}</div>
+          <div class="lbl">kcal ${over?'dépassé':'restant'}</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div class="muted" style="font-size:12px;">Objectif ${target} kcal${burned>0?` + ${burned} brûlées`:''}</div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:4px;">${totalKcal} <span class="muted" style="font-weight:600;font-size:12.5px;">consommées / ${netTarget} kcal</span></div>
+        <div class="muted" style="font-size:12px;">Protéines</div>
+        <div style="font-weight:800;font-size:16px;">${totalProt} g <span class="muted" style="font-weight:600;font-size:12.5px;">/ 110-130 g</span></div>
+        <div class="macro-bar"><div style="background:var(--mint);width:${proteinPct}%;"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:12px;background:var(--accent-light);color:var(--accent);padding:3px 10px;border-radius:999px;font-weight:700;">${mealCount} repas</span>
+      ${avgScore!==null?`<span style="font-size:12px;background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:999px;font-weight:700;">Score moy. ${avgScore}/10</span>`:''}
+      ${plaisirCount>0?`<span style="font-size:12px;background:var(--coral-light);color:var(--coral);padding:3px 10px;border-radius:999px;font-weight:700;">${plaisirCount} plaisir</span>`:''}
+      ${hasFruits?`<span style="font-size:12px;background:#fff8e1;color:#e6a800;padding:3px 10px;border-radius:999px;font-weight:700;">🍎 Fruits</span>`:''}
+      ${hasDairy?`<span style="font-size:12px;background:#fef9e7;color:#b7860b;padding:3px 10px;border-radius:999px;font-weight:700;">🧀 Laitiers</span>`:''}
+    </div>
+    <div style="margin-top:10px;background:var(--accent-light);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--accent);">💡 ${conseil}</div>
+  ` : `<div class="empty" style="margin-top:8px;">Aucun repas enregistré aujourd'hui.<br><span style="font-size:12px;color:var(--muted);">Ajoute un repas dans le Journal pour voir le résumé.</span></div>`;
 }
 
 function handleMealPhoto(evt){
@@ -2036,8 +2149,10 @@ function saveMeal(){
   if(!currentMeal) return;
   const score = computeMealScore(currentMeal);
   const analysis = computeMealAnalysis(currentMeal);
+  const totalKcal = currentMealItems.reduce((s,i)=>s+i.kcal,0);
+  const totalProt = Math.round(currentMealItems.reduce((s,i)=>s+i.prot,0)*10)/10;
   const entry = {
-    id:Date.now(), v:2,
+    id:Date.now(), v:3,
     date:todayISO(),
     time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
     photo:currentMeal.photo,
@@ -2048,13 +2163,20 @@ function saveMeal(){
     dairy:[...currentMeal.dairy],
     deviation:currentMeal.deviation, feeling:currentMeal.feeling,
     comment:currentMeal.comment, score, analysis,
+    items:[...currentMealItems], totalKcal, totalProt,
+    // Structure IA-ready pour future analyse coach
+    _meta:{appVersion:3, savedAt:Date.now()}
   };
   const arr = getMeals(); arr.push(entry); setMeals(arr);
-  closeMealForm(); renderMealJournal();
+  closeMealForm();
+  renderMealJournal();
+  recalculerSuiviDuJour(todayISO());
 }
 
 function deleteMeal(id){
-  let arr = getMeals(); arr = arr.filter(m=>m.id!==id); setMeals(arr); renderMealJournal();
+  let arr = getMeals(); arr = arr.filter(m=>m.id!==id); setMeals(arr);
+  renderMealJournal();
+  recalculerSuiviDuJour(todayISO());
 }
 
 function renderMealJournal(){
@@ -2063,7 +2185,7 @@ function renderMealJournal(){
   if(!wrap) return;
   if(arr.length===0){ wrap.innerHTML='<div class="empty">Aucun repas enregistré pour l\'instant.</div>'; return; }
 
-  const typeLabels = {petitdej:'Petit-déjeuner',dejeuner:'Déjeuner',collation:'Collation',diner:'Dîner'};
+  const typeLabels = {petitdej:'Petit-déjeuner',dejeuner:'Déjeuner',collation:'Collation',diner:'Dîner',plaisir:'Repas plaisir 🍕'};
   const devLabels = {aucun:'',petit:'Petit écart',modere:'Écart modéré',gros:'Gros écart'};
   const feelLabels = {faim:'Faim',envie:'Envie',stress:'Stress',fatigue:'Fatigue',social:'Moment social',plaisir:'Plaisir assumé',frustration:'Frustration',emotionnel:'Craquage émotionnel'};
 
@@ -2094,6 +2216,7 @@ function renderMealJournal(){
             <span style="font-size:18px;font-weight:800;color:${col};flex:0 0 auto;margin-left:8px;">${m.score}<span style="font-size:10px;color:var(--muted);font-weight:500;">/10</span></span>
           </div>
           ${allIngr.length?`<p class="muted" style="margin-top:3px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${allIngr.join(', ')}</p>`:''}
+          ${(m.totalKcal>0||m.totalProt>0)?`<p style="margin-top:3px;font-size:12px;font-weight:700;color:var(--accent);">${m.totalKcal} kcal · ${m.totalProt} g prot.</p>`:''}
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
             ${devLbl?`<span style="font-size:11px;background:var(--coral-light);color:var(--coral);padding:2px 8px;border-radius:999px;font-weight:600;">${devLbl}</span>`:''}
             ${feelLbl?`<span style="font-size:11px;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:999px;font-weight:600;border:1px solid var(--border);">${feelLbl}</span>`:''}
