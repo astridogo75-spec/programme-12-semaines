@@ -393,6 +393,19 @@
         <button class="btn outline" onclick="saveStartDate()">Enregistrer les réglages</button>
       </div>
 
+      <div class="card">
+        <h3>Sauvegarde des données</h3>
+        <p class="muted">Sur iPhone, supprimer l'icône efface tes données. <strong>Exporte avant chaque mise à jour</strong>, puis réimporte après réinstallation.</p>
+        <div class="grid2" style="margin-top:12px;">
+          <button class="btn outline" onclick="exportData()">↓ Exporter</button>
+          <label class="btn outline" style="text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+            ↑ Importer
+            <input type="file" accept=".json" onchange="importData(event)" style="display:none;">
+          </label>
+        </div>
+        <div id="backupStatus" style="margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center;"></div>
+      </div>
+
     </section>
 
     <!-- PROGRAMME -->
@@ -1952,6 +1965,51 @@ function renderRecovery(){
   const lbl = recoveryLabel(score);
   document.getElementById('recoveryScoreBadge').textContent = lbl ? `${score}/100 · ${lbl.text}` : 'À renseigner';
   document.getElementById('recoveryAlert').innerHTML = painAlert(rec);
+}
+
+/* ============== SAUVEGARDE / RESTAURATION ============== */
+
+const BACKUP_KEYS = [
+  LS_START, LS_DIET, LS_MEASURES, LS_CALTARGET, LS_FOODLOG,
+  LS_MEALS, LS_WATER, LS_WATER_TARGET, LS_BURNED, LS_SESSIONDONE,
+  LS_RECOVERY, LS_SCANNER
+];
+
+function exportData(){
+  const data = {_version:1, _exportDate: new Date().toISOString()};
+  BACKUP_KEYS.forEach(k=>{ const v = localStorage.getItem(k); if(v) data[k] = v; });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `programme12-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const el = document.getElementById('backupStatus');
+  if(el) el.textContent = `Sauvegarde exportée le ${new Date().toLocaleString('fr-FR')}`;
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      BACKUP_KEYS.forEach(k=>{ if(data[k] !== undefined){ localStorage.setItem(k, data[k]); count++; } });
+      const el = document.getElementById('backupStatus');
+      if(el) el.textContent = `✓ ${count} données restaurées depuis la sauvegarde du ${(data._exportDate||'').slice(0,10)}.`;
+      refreshAll();
+    }catch(err){
+      const el = document.getElementById('backupStatus');
+      if(el){ el.textContent = 'Fichier invalide — impossible de restaurer.'; el.style.color='var(--coral)'; }
+    }
+    event.target.value = ''; // reset pour permettre un re-import
+  };
+  reader.readAsText(file);
 }
 
 /* ============== INIT ============== */
