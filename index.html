@@ -1794,7 +1794,17 @@ const MEAL_FOOD_GROUPS = [
   {key:'lipides', label:'🥑 Bons lipides', items:['Huile d\'olive','Avocat','Amandes','Noix','Graines de chia','Graines de lin','Beurre de cacahuète']},
   {key:'fruits', label:'🍎 Fruits', items:['Fruits rouges','Banane','Pomme','Poire','Kiwi','Orange','Clémentine','Pêche','Abricot','Prune','Raisin','Ananas','Mangue','Compote sans sucres ajoutés']},
   {key:'plaisir', label:'🍕 Repas plaisir / craquage', items:['Pizza','Burger','Frites','Glace','Quiche lorraine','Apéro','Chips','Gâteau','Viennoiserie','Restaurant','Alcool','Autre']},
+  {key:'dairy', label:'🧀 Produits laitiers / fromages', items:[
+    'Fêta','Halloumi','Chèvre frais','Chèvre bûche','Fromage râpé','Fromage classique',
+    'Mozzarella','Ricotta','Parmesan','Skyr','Fromage blanc','Petits suisses',
+    'Yaourt nature','Lait demi-écrémé','Lait entier','Lait écrémé',
+    'Lait végétal amande','Lait végétal soja','Lait végétal avoine','Lait végétal coco',
+  ]},
 ];
+// Produits laitiers qui contribuent aux protéines
+const DAIRY_PROTEIN_ITEMS = ['Skyr','Fromage blanc','Petits suisses','Lait végétal soja','Lait demi-écrémé','Lait entier','Lait écrémé','Yaourt nature'];
+// Fromages riches en lipides → message bienveillant
+const DAIRY_RICH_ITEMS = ['Fêta','Halloumi','Chèvre frais','Chèvre bûche','Fromage râpé','Fromage classique','Mozzarella','Ricotta','Parmesan'];
 const MEAL_DEVIATIONS = [
   {key:'aucun', label:'Aucun écart'},
   {key:'petit', label:'Petit écart'},
@@ -1814,7 +1824,7 @@ const MEAL_FEELINGS = [
 
 let currentMeal = null;
 function resetMeal(){
-  currentMeal = {type:null,context:null,proteins:[],legumes:[],feculents:[],lipides:[],fruits:[],plaisir:[],deviation:'aucun',feeling:null,comment:'',photo:null};
+  currentMeal = {type:null,context:null,proteins:[],legumes:[],feculents:[],lipides:[],fruits:[],plaisir:[],dairy:[],deviation:'aucun',feeling:null,comment:'',photo:null};
 }
 
 function getMeals(){ return JSON.parse(localStorage.getItem(LS_MEALS)||'[]'); }
@@ -1949,7 +1959,9 @@ function toggleMealFoodChip(el){
 /* ---- Score & analyse ---- */
 
 function computeMealScore(meal){
-  const hasP = meal.proteins.length>0;
+  // Les laitiers protéinés (skyr, fromage blanc, lait soja…) contribuent aux protéines
+  const hasDairyProtein = (meal.dairy||[]).some(d=>DAIRY_PROTEIN_ITEMS.includes(d));
+  const hasP = meal.proteins.length>0 || hasDairyProtein;
   const hasL = meal.legumes.length>0;
   const hasF = meal.feculents.length>0;
   const hasLip = meal.lipides.length>0;
@@ -1990,6 +2002,12 @@ function computeMealAnalysis(meal){
   if(plaisirLow.includes('pizza')) msgs.push("Repas riche, à rééquilibrer ensuite avec protéines, légumes et hydratation.");
   if(plaisirLow.some(p=>p.includes('glace'))) msgs.push("Dessert plaisir, impact surtout lié à la portion et à la fréquence.");
   if(plaisirLow.some(p=>p.includes('quiche'))) msgs.push("Repas plus riche en lipides, idéalement à accompagner de légumes.");
+  // Produits laitiers
+  const dairy = meal.dairy||[];
+  const hasRichCheese = dairy.some(d=>DAIRY_RICH_ITEMS.includes(d));
+  const hasVegMilkLight = dairy.some(d=>['Lait végétal amande','Lait végétal avoine','Lait végétal coco'].includes(d));
+  if(hasRichCheese) msgs.push("Fromage ajouté : intéressant pour le goût et la satiété, mais surveille la portion dans un objectif de sèche.");
+  if(hasVegMilkLight && !hasP) msgs.push("Le lait végétal choisi apporte peu de protéines — pense à en ajouter une source.");
   if(!msgs.length) msgs.push("Repas enregistré.");
   return msgs.join(' ');
 }
@@ -2027,6 +2045,7 @@ function saveMeal(){
     proteins:[...currentMeal.proteins], legumes:[...currentMeal.legumes],
     feculents:[...currentMeal.feculents], lipides:[...currentMeal.lipides],
     fruits:[...currentMeal.fruits], plaisir:[...currentMeal.plaisir],
+    dairy:[...currentMeal.dairy],
     deviation:currentMeal.deviation, feeling:currentMeal.feeling,
     comment:currentMeal.comment, score, analysis,
   };
@@ -2059,7 +2078,7 @@ function renderMealJournal(){
     }
     // Nouveau format v2
     const col = m.score>=7?'var(--accent)':m.score>=4?'#e8a000':'var(--coral)';
-    const allIngr = [...(m.proteins||[]),...(m.legumes||[]),...(m.feculents||[]),...(m.lipides||[]),...(m.fruits||[]),...(m.plaisir||[])];
+    const allIngr = [...(m.proteins||[]),...(m.legumes||[]),...(m.feculents||[]),...(m.lipides||[]),...(m.fruits||[]),...(m.plaisir||[]),...(m.dairy||[])];
     const typeLbl = m.type?typeLabels[m.type]||'':'';
     const devLbl = m.deviation&&m.deviation!=='aucun'?devLabels[m.deviation]||'':'';
     const feelLbl = m.feeling?feelLabels[m.feeling]||'':'';
@@ -2078,6 +2097,7 @@ function renderMealJournal(){
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
             ${devLbl?`<span style="font-size:11px;background:var(--coral-light);color:var(--coral);padding:2px 8px;border-radius:999px;font-weight:600;">${devLbl}</span>`:''}
             ${feelLbl?`<span style="font-size:11px;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:999px;font-weight:600;border:1px solid var(--border);">${feelLbl}</span>`:''}
+            ${(m.dairy&&m.dairy.length>0)?`<span style="font-size:11px;background:#fef9e7;color:#b7860b;padding:2px 8px;border-radius:999px;font-weight:600;border:1px solid #f0d98c;">🧀 Fromage / laitier</span>`:''}
           </div>
           <p class="muted" style="margin-top:4px;font-size:12px;font-style:italic;">${m.analysis||''}</p>
           ${m.comment?`<p style="margin-top:3px;font-size:12px;color:var(--text);">"${m.comment}"</p>`:''}
