@@ -277,6 +277,31 @@
   .ring-center .lbl{font-size:9.5px;color:var(--muted);font-weight:600;text-align:center;margin-top:2px;}
   .macro-bar{background:#e9ece8;border-radius:8px;height:7px;overflow:hidden;margin-top:6px;}
   .macro-bar > div{height:100%;border-radius:8px;}
+  /* --- Journal repas enrichi --- */
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;}
+  .chip{
+    padding:7px 13px;border-radius:999px;
+    background:#f0f1ef;border:1.5px solid var(--border);
+    font-size:12.5px;font-weight:600;color:var(--muted);
+    cursor:pointer;user-select:none;-webkit-user-select:none;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  .chip.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+  .chip.plaisir-chip.on{background:var(--coral-light);border-color:var(--coral);color:var(--coral);}
+  .meal-group{margin-bottom:6px;}
+  .meal-group-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 12px;background:var(--bg);border-radius:10px;
+    cursor:pointer;font-size:13px;font-weight:700;user-select:none;-webkit-user-select:none;
+  }
+  .meal-group-body{display:none;padding:6px 2px 2px;}
+  .meal-group.open .meal-group-body{display:block;}
+  .meal-group.open .chevron{transform:rotate(180deg);}
+  .meal-count-badge{
+    display:inline-block;padding:2px 7px;border-radius:999px;
+    font-size:10.5px;font-weight:700;margin-left:5px;vertical-align:middle;
+    transition:background .15s,color .15s;
+  }
   /* --- Scanner mon assiette --- */
   .scan-item{
     display:flex;align-items:center;justify-content:space-between;
@@ -466,21 +491,8 @@
           <h3 style="margin:0;">Journal repas (photo)</h3>
           <button class="small-btn" onclick="openMealForm()">+ Repas</button>
         </div>
-        <p class="muted">Prends une photo de ton assiette, puis indique ce qu'elle contient — l'app compare à la répartition recommandée.</p>
-        <div class="card" id="mealFormCard" style="display:none; box-shadow:none; border-style:dashed; margin-top:10px; margin-bottom:0;">
-          <div class="field">
-            <label>Photo du repas</label>
-            <input type="file" accept="image/*" capture="environment" id="mealPhotoInput" onchange="handleMealPhoto(event)" style="padding:8px 0;border:none;background:none;">
-            <img id="mealPhotoPreview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;">
-          </div>
-          <p class="muted" style="margin-bottom:6px;">Cette assiette contient :</p>
-          <div class="check-row"><span>Protéines</span><div class="toggle" id="grp-proteines" onclick="toggleMealGroup('proteines',this)"><div class="knob"></div></div></div>
-          <div class="check-row"><span>Légumes</span><div class="toggle" id="grp-legumes" onclick="toggleMealGroup('legumes',this)"><div class="knob"></div></div></div>
-          <div class="check-row"><span>Féculents</span><div class="toggle" id="grp-feculents" onclick="toggleMealGroup('feculents',this)"><div class="knob"></div></div></div>
-          <div class="check-row"><span>Bons lipides</span><div class="toggle" id="grp-lipides" onclick="toggleMealGroup('lipides',this)"><div class="knob"></div></div></div>
-          <button class="btn" style="margin-top:10px;" onclick="saveMeal()">Enregistrer le repas</button>
-          <button class="btn outline" style="margin-top:8px;" onclick="closeMealForm()">Annuler</button>
-        </div>
+        <p class="muted">Photo, type, contexte, ingrédients, ressenti — score bienveillant et analyse automatique.</p>
+        <div id="mealFormCard" style="display:none;margin-top:12px;border:1.5px dashed var(--border);border-radius:16px;padding:14px;"></div>
         <div id="mealJournal" style="margin-top:10px;"></div>
       </div>
 
@@ -1758,34 +1770,132 @@ function renderScanMealLog(){
 
 /* ============== JOURNAL REPAS (PHOTO) ============== */
 
-let currentMealPhoto = null;
-let currentMealGroups = {proteines:false, legumes:false, feculents:false, lipides:false};
+const MEAL_TYPES = [
+  {key:'petitdej', label:'Petit-déjeuner'},
+  {key:'dejeuner', label:'Déjeuner'},
+  {key:'collation', label:'Collation'},
+  {key:'diner', label:'Dîner'},
+];
+const MEAL_CONTEXTS = [
+  {key:'avant-sport', label:'Avant sport'},
+  {key:'apres-sport', label:'Après sport'},
+  {key:'sans-sport', label:'Jour sans sport'},
+  {key:'repas-leger', label:'Repas léger'},
+  {key:'repas-plaisir', label:'Repas plaisir'},
+  {key:'craquage', label:'Craquage'},
+  {key:'restaurant', label:'Restaurant'},
+  {key:'moment-social', label:'Moment social'},
+  {key:'fatigue-stress', label:'Fatigue / stress'},
+];
+const MEAL_FOOD_GROUPS = [
+  {key:'proteins', label:'🥩 Protéines', items:['Poulet','Dinde','Œufs','Jambon blanc','Steak haché 5%','Bœuf maigre','Veau','Tofu','Skyr','Fromage blanc','Petits suisses','Whey','Lentilles','Pois chiches']},
+  {key:'legumes', label:'🥦 Légumes', items:['Courgettes','Concombre','Tomates','Salade','Haricots verts','Brocolis','Épinards','Champignons','Aubergines','Poivrons','Carottes','Chou-fleur','Petits pois']},
+  {key:'feculents', label:'🌾 Féculents', items:['Quinoa','Riz','Pâtes complètes','Pommes de terre','Patate douce','Flocons d\'avoine','Pain complet','Wrap complet','Lentilles','Pois chiches']},
+  {key:'lipides', label:'🥑 Bons lipides', items:['Huile d\'olive','Avocat','Amandes','Noix','Graines de chia','Graines de lin','Beurre de cacahuète']},
+  {key:'fruits', label:'🍎 Fruits', items:['Fruits rouges','Banane','Pomme','Poire','Kiwi','Orange','Clémentine','Pêche','Abricot','Prune','Raisin','Ananas','Mangue','Compote sans sucres ajoutés']},
+  {key:'plaisir', label:'🍕 Repas plaisir / craquage', items:['Pizza','Burger','Frites','Glace','Quiche lorraine','Apéro','Chips','Gâteau','Viennoiserie','Restaurant','Alcool','Autre']},
+];
+const MEAL_DEVIATIONS = [
+  {key:'aucun', label:'Aucun écart'},
+  {key:'petit', label:'Petit écart'},
+  {key:'modere', label:'Écart modéré'},
+  {key:'gros', label:'Gros écart'},
+];
+const MEAL_FEELINGS = [
+  {key:'faim', label:'Faim'},
+  {key:'envie', label:'Envie'},
+  {key:'stress', label:'Stress'},
+  {key:'fatigue', label:'Fatigue'},
+  {key:'social', label:'Moment social'},
+  {key:'plaisir', label:'Plaisir assumé'},
+  {key:'frustration', label:'Frustration'},
+  {key:'emotionnel', label:'Craquage émotionnel'},
+];
 
-function getMeals(){
-  return JSON.parse(localStorage.getItem(LS_MEALS) || "[]");
+let currentMeal = null;
+function resetMeal(){
+  currentMeal = {type:null,context:null,proteins:[],legumes:[],feculents:[],lipides:[],fruits:[],plaisir:[],deviation:'aucun',feeling:null,comment:'',photo:null};
 }
+
+function getMeals(){ return JSON.parse(localStorage.getItem(LS_MEALS)||'[]'); }
 function setMeals(arr){
-  // garder au maximum les 30 derniers repas pour limiter la taille du stockage local
-  if(arr.length > 30) arr = arr.slice(arr.length-30);
-  try{
-    localStorage.setItem(LS_MEALS, JSON.stringify(arr));
-  }catch(e){
-    // stockage plein : on retire les plus anciens et on retente
-    arr = arr.slice(Math.ceil(arr.length/2));
-    try{ localStorage.setItem(LS_MEALS, JSON.stringify(arr)); }catch(e2){}
+  if(arr.length>30) arr=arr.slice(arr.length-30);
+  try{ localStorage.setItem(LS_MEALS,JSON.stringify(arr)); }catch(e){
+    arr=arr.slice(Math.ceil(arr.length/2));
+    try{ localStorage.setItem(LS_MEALS,JSON.stringify(arr)); }catch(e2){}
   }
 }
+
 function openMealForm(){
-  currentMealPhoto = null;
-  currentMealGroups = {proteines:false, legumes:false, feculents:false, lipides:false};
-  document.getElementById('mealFormCard').style.display = 'block';
-  document.getElementById('mealPhotoPreview').style.display = 'none';
-  document.getElementById('mealPhotoInput').value = '';
-  ['proteines','legumes','feculents','lipides'].forEach(k=>document.getElementById('grp-'+k).classList.remove('on'));
+  resetMeal();
+  const card = document.getElementById('mealFormCard');
+  card.style.display = 'block';
+  card.innerHTML = buildMealFormHTML();
+  updateMealScore();
 }
 function closeMealForm(){
   document.getElementById('mealFormCard').style.display = 'none';
 }
+
+function buildMealFormHTML(){
+  // Photo
+  let h = `<div class="field">
+    <label>Photo du repas (facultatif)</label>
+    <input type="file" accept="image/*" capture="environment" id="mealPhotoInput" onchange="handleMealPhoto(event)" style="padding:8px 0;border:none;background:none;width:100%;">
+    <img id="mealPhotoPreview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:200px;object-fit:cover;">
+  </div>`;
+
+  // Type de repas
+  h += `<div class="field"><label>Type de repas</label><div class="chip-row">` +
+    MEAL_TYPES.map(t=>`<div class="chip" data-field="type" data-value="${t.key}" onclick="selectMealChipOption(this)">${t.label}</div>`).join('') +
+  `</div></div>`;
+
+  // Contexte
+  h += `<div class="field"><label>Contexte</label><div class="chip-row">` +
+    MEAL_CONTEXTS.map(c=>`<div class="chip" data-field="context" data-value="${c.key}" onclick="selectMealChipOption(this)">${c.label}</div>`).join('') +
+  `</div></div>`;
+
+  // Groupes alimentaires (accordéons)
+  h += MEAL_FOOD_GROUPS.map(g=>
+    `<div class="meal-group">
+      <div class="meal-group-head" onclick="this.closest('.meal-group').classList.toggle('open')">
+        <span>${g.label} <span class="meal-count-badge" style="background:var(--border);color:var(--muted);">0</span></span>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="meal-group-body"><div class="chip-row">` +
+        g.items.map(item=>`<div class="chip${g.key==='plaisir'?' plaisir-chip':''}" data-group="${g.key}" data-item="${item.replace(/"/g,'&quot;')}" onclick="toggleMealFoodChip(this)">${item}</div>`).join('') +
+      `</div></div>
+    </div>`
+  ).join('');
+
+  // Niveau d'écart
+  h += `<div class="field" style="margin-top:6px;"><label>Niveau d'écart</label><div class="chip-row">` +
+    MEAL_DEVIATIONS.map((d,i)=>`<div class="chip${i===0?' on':''}" data-field="deviation" data-value="${d.key}" onclick="selectMealChipOption(this)">${d.label}</div>`).join('') +
+  `</div></div>`;
+
+  // Ressenti
+  h += `<div class="field"><label>Ressenti (facultatif)</label><div class="chip-row">` +
+    MEAL_FEELINGS.map(f=>`<div class="chip" data-field="feeling" data-value="${f.key}" onclick="selectMealChipOption(this)">${f.label}</div>`).join('') +
+  `</div></div>`;
+
+  // Commentaire
+  h += `<div class="field"><label>Commentaire libre (facultatif)</label>
+    <textarea id="mealComment" oninput="currentMeal.comment=this.value;updateMealScore()"
+      style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;min-height:58px;resize:none;background:#fafbfa;color:var(--text);"></textarea>
+  </div>`;
+
+  // Score preview (mis à jour en temps réel)
+  h += `<div id="mealScorePreview"></div>`;
+
+  // Boutons
+  h += `<div style="display:flex;gap:8px;margin-top:14px;">
+    <button class="btn" onclick="saveMeal()" style="flex:1;">Enregistrer le repas</button>
+    <button class="btn outline" onclick="closeMealForm()" style="flex:0 0 auto;padding:13px 16px;">✕</button>
+  </div>`;
+
+  return h;
+}
+
 function handleMealPhoto(evt){
   const file = evt.target.files[0];
   if(!file) return;
@@ -1793,74 +1903,189 @@ function handleMealPhoto(evt){
   reader.onload = function(e){
     const img = new Image();
     img.onload = function(){
-      // redimensionner pour limiter la taille stockée
       const maxW = 480;
       const scale = Math.min(1, maxW/img.width);
       const canvas = document.createElement('canvas');
-      canvas.width = img.width*scale;
-      canvas.height = img.height*scale;
+      canvas.width = img.width*scale; canvas.height = img.height*scale;
       canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      currentMealPhoto = canvas.toDataURL('image/jpeg', 0.6);
+      currentMeal.photo = canvas.toDataURL('image/jpeg', 0.6);
       const preview = document.getElementById('mealPhotoPreview');
-      preview.src = currentMealPhoto;
-      preview.style.display = 'block';
+      preview.src = currentMeal.photo; preview.style.display = 'block';
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
-function toggleMealGroup(key, el){
-  currentMealGroups[key] = !currentMealGroups[key];
-  el.classList.toggle('on');
+
+function selectMealChipOption(el){
+  const field = el.dataset.field;
+  const value = el.dataset.value;
+  el.closest('.chip-row').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  currentMeal[field] = value;
+  updateMealScore();
 }
-function mealFeedback(groups){
-  const labels = {proteines:"protéines", legumes:"légumes", feculents:"féculents", lipides:"lipides"};
-  const missing = Object.keys(groups).filter(k=>!groups[k]).map(k=>labels[k]);
-  const count = Object.keys(groups).length - missing.length;
-  if(count===4) return "Repas complet : bien équilibré par rapport à la répartition recommandée.";
-  if(count===3) return `Repas presque complet — il manque : ${missing.join(', ')}.`;
-  if(count===2) return `Repas partiel — il manque : ${missing.join(', ')}.`;
-  return `Repas incomplet par rapport à la répartition recommandée — il manque : ${missing.join(', ')}.`;
+
+function toggleMealFoodChip(el){
+  const group = el.dataset.group;
+  const item = el.dataset.item;
+  const arr = currentMeal[group];
+  const idx = arr.indexOf(item);
+  if(idx===-1){ arr.push(item); el.classList.add('on'); }
+  else { arr.splice(idx,1); el.classList.remove('on'); }
+  const badge = el.closest('.meal-group').querySelector('.meal-count-badge');
+  if(badge){
+    badge.textContent = arr.length;
+    if(arr.length>0){
+      badge.style.background = group==='plaisir'?'var(--coral-light)':'var(--accent-light)';
+      badge.style.color = group==='plaisir'?'var(--coral)':'var(--accent)';
+    } else {
+      badge.style.background='var(--border)'; badge.style.color='var(--muted)';
+    }
+  }
+  updateMealScore();
 }
+
+/* ---- Score & analyse ---- */
+
+function computeMealScore(meal){
+  const hasP = meal.proteins.length>0;
+  const hasL = meal.legumes.length>0;
+  const hasF = meal.feculents.length>0;
+  const hasLip = meal.lipides.length>0;
+  const hasFr = meal.fruits.length>0;
+  const isBreakSnack = meal.type==='petitdej'||meal.type==='collation';
+  const isSport = meal.context==='avant-sport'||meal.context==='apres-sport';
+  let s = 0;
+  if(hasP) s+=3; else s-=1;
+  if(hasL) s+=2; else s-=1;
+  if(hasF) s+=1;
+  if(hasLip) s+=1;
+  if(hasFr && isBreakSnack) s+=1;
+  if(isSport && hasF) s+=1;
+  if(meal.deviation==='petit') s-=1;
+  if(meal.deviation==='modere') s-=2;
+  if(meal.deviation==='gros') s-=3;
+  return Math.max(0, Math.min(10, s));
+}
+
+function computeMealAnalysis(meal){
+  const msgs = [];
+  const hasP = meal.proteins.length>0;
+  const hasL = meal.legumes.length>0;
+  const hasF = meal.feculents.length>0;
+  const hasFr = meal.fruits.length>0;
+  const hasPlaisir = meal.plaisir.length>0;
+  const isSport = meal.context==='avant-sport'||meal.context==='apres-sport';
+  const isPlaisirCtx = meal.context==='repas-plaisir'||meal.context==='craquage';
+  const plaisirLow = meal.plaisir.map(p=>p.toLowerCase());
+
+  if(hasP && hasL) msgs.push("Bonne base pour une sèche.");
+  if(!hasP) msgs.push("Ajoute une source de protéines pour préserver la masse musculaire.");
+  if(!hasL && !isPlaisirCtx && !hasPlaisir) msgs.push("Ajoute des légumes pour améliorer la satiété.");
+  if(hasF && isSport) msgs.push("Féculents bien placés autour de l'entraînement.");
+  if(hasFr) msgs.push("Fruit intégré dans la journée, à adapter selon ton niveau d'activité.");
+  if(isPlaisirCtx || meal.deviation==='modere' || meal.deviation==='gros')
+    msgs.push("Repas plaisir enregistré. Ce n'est pas grave : l'important est la tendance sur la semaine.");
+  if(plaisirLow.includes('pizza')) msgs.push("Repas riche, à rééquilibrer ensuite avec protéines, légumes et hydratation.");
+  if(plaisirLow.some(p=>p.includes('glace'))) msgs.push("Dessert plaisir, impact surtout lié à la portion et à la fréquence.");
+  if(plaisirLow.some(p=>p.includes('quiche'))) msgs.push("Repas plus riche en lipides, idéalement à accompagner de légumes.");
+  if(!msgs.length) msgs.push("Repas enregistré.");
+  return msgs.join(' ');
+}
+
+function updateMealScore(){
+  if(!currentMeal) return;
+  const el = document.getElementById('mealScorePreview');
+  if(!el) return;
+  const score = computeMealScore(currentMeal);
+  const analysis = computeMealAnalysis(currentMeal);
+  const col = score>=7?'var(--accent)':score>=4?'#e8a000':'var(--coral)';
+  const bars = Array.from({length:10},(_,i)=>
+    `<div style="flex:1;height:6px;border-radius:3px;background:${i<score?col:'var(--border)'};"></div>`
+  ).join('');
+  el.innerHTML = `<div style="background:var(--bg);border-radius:14px;padding:12px 14px;margin-top:6px;">
+    <div class="row-between" style="margin-bottom:6px;">
+      <strong style="font-size:13.5px;">Score du repas</strong>
+      <span style="font-size:19px;font-weight:800;color:${col};">${score}<span style="font-size:11px;color:var(--muted);font-weight:500;">/10</span></span>
+    </div>
+    <div style="display:flex;gap:3px;margin-bottom:8px;">${bars}</div>
+    <p style="font-size:12.5px;color:var(--muted);margin:0;font-style:italic;">${analysis}</p>
+  </div>`;
+}
+
 function saveMeal(){
+  if(!currentMeal) return;
+  const score = computeMealScore(currentMeal);
+  const analysis = computeMealAnalysis(currentMeal);
   const entry = {
-    id: Date.now(),
-    date: todayISO(),
-    time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}),
-    photo: currentMealPhoto,
-    groups: {...currentMealGroups},
-    feedback: mealFeedback(currentMealGroups),
+    id:Date.now(), v:2,
+    date:todayISO(),
+    time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
+    photo:currentMeal.photo,
+    type:currentMeal.type, context:currentMeal.context,
+    proteins:[...currentMeal.proteins], legumes:[...currentMeal.legumes],
+    feculents:[...currentMeal.feculents], lipides:[...currentMeal.lipides],
+    fruits:[...currentMeal.fruits], plaisir:[...currentMeal.plaisir],
+    deviation:currentMeal.deviation, feeling:currentMeal.feeling,
+    comment:currentMeal.comment, score, analysis,
   };
-  const arr = getMeals();
-  arr.push(entry);
-  setMeals(arr);
-  closeMealForm();
-  renderMealJournal();
+  const arr = getMeals(); arr.push(entry); setMeals(arr);
+  closeMealForm(); renderMealJournal();
 }
+
 function deleteMeal(id){
-  let arr = getMeals();
-  arr = arr.filter(m=>m.id!==id);
-  setMeals(arr);
-  renderMealJournal();
+  let arr = getMeals(); arr = arr.filter(m=>m.id!==id); setMeals(arr); renderMealJournal();
 }
+
 function renderMealJournal(){
   const arr = getMeals().slice().reverse();
   const wrap = document.getElementById('mealJournal');
-  if(arr.length===0){
-    wrap.innerHTML = `<div class="empty">Aucun repas enregistré pour l'instant.</div>`;
-    return;
-  }
-  wrap.innerHTML = arr.slice(0,15).map(m=>`
-    <div class="day-card" style="margin-bottom:8px;">
-      <div style="display:flex;gap:10px;padding:10px;">
-        ${m.photo ? `<img src="${m.photo}" style="width:64px;height:64px;border-radius:14px;object-fit:cover;flex:0 0 auto;">` : `<div class="icon-circle" style="width:64px;height:64px;border-radius:14px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg></div>`}
-        <div style="flex:1;">
-          <div class="row-between"><strong style="font-size:13px;">${m.date} · ${m.time}</strong><button class="small-btn" style="background:var(--coral-light);color:var(--coral);" onclick="deleteMeal(${m.id})">Suppr.</button></div>
-          <p class="muted" style="margin-top:4px;">${m.feedback}</p>
+  if(!wrap) return;
+  if(arr.length===0){ wrap.innerHTML='<div class="empty">Aucun repas enregistré pour l\'instant.</div>'; return; }
+
+  const typeLabels = {petitdej:'Petit-déjeuner',dejeuner:'Déjeuner',collation:'Collation',diner:'Dîner'};
+  const devLabels = {aucun:'',petit:'Petit écart',modere:'Écart modéré',gros:'Gros écart'};
+  const feelLabels = {faim:'Faim',envie:'Envie',stress:'Stress',fatigue:'Fatigue',social:'Moment social',plaisir:'Plaisir assumé',frustration:'Frustration',emotionnel:'Craquage émotionnel'};
+
+  wrap.innerHTML = arr.slice(0,15).map(m=>{
+    // Rétrocompat : anciens repas v1
+    if(!m.v || m.v<2){
+      return `<div class="day-card" style="margin-bottom:8px;"><div style="display:flex;gap:10px;padding:10px;">
+        ${m.photo?`<img src="${m.photo}" style="width:60px;height:60px;border-radius:12px;object-fit:cover;flex:0 0 auto;">`:`<div class="icon-circle" style="width:60px;height:60px;border-radius:12px;font-size:20px;display:flex;align-items:center;justify-content:center;">🍽</div>`}
+        <div style="flex:1;"><div class="row-between"><strong style="font-size:12.5px;">${m.date} · ${m.time}</strong><button class="small-btn" style="background:var(--coral-light);color:var(--coral);" onclick="deleteMeal(${m.id})">Suppr.</button></div>
+        <p class="muted" style="margin-top:4px;font-size:12.5px;">${m.feedback||''}</p></div>
+      </div></div>`;
+    }
+    // Nouveau format v2
+    const col = m.score>=7?'var(--accent)':m.score>=4?'#e8a000':'var(--coral)';
+    const allIngr = [...(m.proteins||[]),...(m.legumes||[]),...(m.feculents||[]),...(m.lipides||[]),...(m.fruits||[]),...(m.plaisir||[])];
+    const typeLbl = m.type?typeLabels[m.type]||'':'';
+    const devLbl = m.deviation&&m.deviation!=='aucun'?devLabels[m.deviation]||'':'';
+    const feelLbl = m.feeling?feelLabels[m.feeling]||'':'';
+    return `<div class="day-card" style="margin-bottom:8px;"><div style="padding:10px 12px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        ${m.photo?`<img src="${m.photo}" style="width:62px;height:62px;border-radius:12px;object-fit:cover;flex:0 0 auto;">`:`<div class="icon-circle" style="width:62px;height:62px;border-radius:12px;font-size:22px;display:flex;align-items:center;justify-content:center;">🍽</div>`}
+        <div style="flex:1;min-width:0;">
+          <div class="row-between">
+            <div style="flex:1;min-width:0;">
+              <span style="font-size:12px;font-weight:700;">${m.date} · ${m.time}</span>
+              ${typeLbl?`<span style="margin-left:6px;font-size:11px;background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:999px;font-weight:700;">${typeLbl}</span>`:''}
+            </div>
+            <span style="font-size:18px;font-weight:800;color:${col};flex:0 0 auto;margin-left:8px;">${m.score}<span style="font-size:10px;color:var(--muted);font-weight:500;">/10</span></span>
+          </div>
+          ${allIngr.length?`<p class="muted" style="margin-top:3px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${allIngr.join(', ')}</p>`:''}
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
+            ${devLbl?`<span style="font-size:11px;background:var(--coral-light);color:var(--coral);padding:2px 8px;border-radius:999px;font-weight:600;">${devLbl}</span>`:''}
+            ${feelLbl?`<span style="font-size:11px;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:999px;font-weight:600;border:1px solid var(--border);">${feelLbl}</span>`:''}
+          </div>
+          <p class="muted" style="margin-top:4px;font-size:12px;font-style:italic;">${m.analysis||''}</p>
+          ${m.comment?`<p style="margin-top:3px;font-size:12px;color:var(--text);">"${m.comment}"</p>`:''}
         </div>
       </div>
-    </div>
-  `).join('');
+      <button class="small-btn" style="background:var(--coral-light);color:var(--coral);margin-top:8px;" onclick="deleteMeal(${m.id})">Supprimer</button>
+    </div></div>`;
+  }).join('');
 }
 
 /* ============== SUIVI / MESURES ============== */
