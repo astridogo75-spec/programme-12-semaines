@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Programme 12 Semaines</title>
+<title>FitProgress</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Programme 12S">
+<meta name="apple-mobile-web-app-title" content="FitProgress">
 <meta name="theme-color" content="#1f6f63">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
@@ -127,7 +127,7 @@
     background:#fafbfa;
   }
   .day-head.today{background:var(--accent-light);}
-  .day-icon{
+  .day-icons
     width:36px;height:36px;border-radius:50%;background:var(--accent-light);color:var(--accent);
     display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-right:10px;
   }
@@ -327,13 +327,33 @@
     background:var(--accent-light);border-radius:12px;padding:10px 12px;
     margin-top:10px;
   }
+  /* --- Idées repas --- */
+  .idee-group{margin-bottom:6px;border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .idee-group-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 14px;background:#fafbfa;cursor:pointer;
+    font-size:13.5px;font-weight:700;user-select:none;-webkit-user-select:none;
+  }
+  .idee-group.open .idee-group-head{background:var(--accent-light);}
+  .idee-group-body{display:none;padding:6px 10px 10px;}
+  .idee-group.open .idee-group-body{display:block;}
+  .idee-card{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:10px 12px;margin-top:8px;
+  }
+  .idee-card .idee-name{font-weight:700;font-size:13.5px;margin-bottom:4px;}
+  .idee-card .idee-detail{font-size:12px;color:var(--muted);}
+  .idee-card .idee-macros{font-size:12px;color:var(--accent);font-weight:700;margin-top:4px;}
+  /* --- Formulaire repas — quantités --- */
+  .food-item-row{display:flex;gap:5px;align-items:center;margin-bottom:6px;}
+  .food-item-row select,.food-item-row input{border:1px solid var(--border);border-radius:8px;padding:7px 6px;font-size:12.5px;background:#fafbfa;}
 </style>
 </head>
 <body>
 <div class="app">
 
   <header class="top">
-    <div class="title">Programme 12 Semaines</div>
+    <div class="title">FitProgress</div>
     <div class="sub">Sèche &amp; recomposition · genoux/hanche protégés</div>
     <div class="badge-row">
       <div class="badge" id="badgeWeek">Semaine 1 / 12</div>
@@ -359,6 +379,16 @@
       </div>
 
       <div id="homeAlert"></div>
+
+      <div class="card" style="margin-bottom:12px;border-color:var(--accent-light);background:var(--accent-light);">
+        <div class="row-between" style="align-items:center;">
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--accent);">💡 Besoin d'inspiration ?</div>
+            <div class="muted" style="font-size:12.5px;margin-top:2px;">Idées de repas équilibrés et plaisir</div>
+          </div>
+          <button class="small-btn" onclick="showTab('diete');setTimeout(()=>document.getElementById('idees-repas-card').scrollIntoView({behavior:'smooth'}),200)">Voir les idées</button>
+        </div>
+      </div>
 
       <div class="warn">
         <strong>Avant de commencer :</strong> en cas de douleur inhabituelle au genou ou à la hanche, d'essoufflement anormal, de vertiges ou de douleur thoracique, on arrête et on demande un avis médical. Avec une prothèse de genou et de l'arthrose de hanche, la progression doit rester contrôlée.
@@ -508,6 +538,13 @@
         <div id="scanMealLog" style="margin-top:10px;"></div>
       </div>
 
+      <!-- IDÉES REPAS -->
+      <div class="card" id="idees-repas-card">
+        <h3>💡 Idées repas</h3>
+        <p class="muted" style="font-size:12.5px;margin-bottom:10px;">Clique sur une idée pour la pré-remplir dans ton journal repas.</p>
+        <div id="ideesRepasAccordeons"></div>
+      </div>
+
       <div class="card">
         <h3>Répartition à chaque repas</h3>
         <ul class="clean">
@@ -649,7 +686,7 @@
       Diète
     </button>
     <button class="tab-btn" data-tab="suivi" onclick="showTab('suivi')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5L18 19v-7"/><path d="M2 19h20"/></svg>
       Suivi
     </button>
   </nav>
@@ -1334,45 +1371,188 @@ function renderWater(){
 
 /* ============== ALIMENTS / CALORIES ============== */
 
-// valeurs nutritionnelles approximatives pour 100 g (aliments du plan diète)
-const FOOD_DB = [
-  {cat:"Protéines", name:"Poulet (blanc, cuit)", kcal:165, protein:31, portion:150},
-  {cat:"Protéines", name:"Dinde (cuite)", kcal:150, protein:29, portion:150},
-  {cat:"Protéines", name:"Jambon blanc", kcal:110, protein:18, portion:50},
-  {cat:"Protéines", name:"Bœuf maigre (cuit)", kcal:175, protein:26, portion:150},
-  {cat:"Protéines", name:"Veau (cuit)", kcal:172, protein:28, portion:150},
-  {cat:"Protéines", name:"Œufs", kcal:148, protein:13, portion:100},
-  {cat:"Protéines", name:"Skyr nature", kcal:63, protein:11, portion:150},
-  {cat:"Protéines", name:"Petits suisses nature", kcal:85, protein:8, portion:100},
-  {cat:"Protéines", name:"Yaourt grec nature", kcal:97, protein:9, portion:125},
-  {cat:"Protéines", name:"Whey (poudre)", kcal:380, protein:75, portion:30},
-  {cat:"Protéines", name:"Tofu", kcal:145, protein:15, portion:100},
-  {cat:"Protéines", name:"Lentilles (cuites)", kcal:116, protein:9, portion:150},
-  {cat:"Protéines", name:"Pois chiches (cuits)", kcal:164, protein:9, portion:150},
-  {cat:"Protéines", name:"Haricots rouges (cuits)", kcal:127, protein:9, portion:150},
-  {cat:"Glucides", name:"Riz basmati (cuit)", kcal:130, protein:2.7, portion:150},
-  {cat:"Glucides", name:"Quinoa (cuit)", kcal:120, protein:4.4, portion:150},
-  {cat:"Glucides", name:"Patate douce (cuite)", kcal:90, protein:2, portion:200},
-  {cat:"Glucides", name:"Pommes de terre vapeur", kcal:80, protein:2, portion:200},
-  {cat:"Glucides", name:"Flocons d'avoine", kcal:375, protein:13, portion:40},
-  {cat:"Glucides", name:"Pain complet ou seigle", kcal:250, protein:9, portion:60},
-  {cat:"Glucides", name:"Banane", kcal:90, protein:1, portion:120},
-  {cat:"Glucides", name:"Fruits rouges", kcal:50, protein:1, portion:100},
-  {cat:"Lipides", name:"Huile d'olive ou colza", kcal:900, protein:0, portion:10},
-  {cat:"Lipides", name:"Avocat", kcal:160, protein:2, portion:80},
-  {cat:"Lipides", name:"Amandes / noix", kcal:600, protein:20, portion:20},
-  {cat:"Lipides", name:"Graines de chia ou de lin", kcal:480, protein:17, portion:15},
-  {cat:"Légumes", name:"Haricots verts (cuits)", kcal:31, protein:1.8, portion:150},
-  {cat:"Légumes", name:"Brocoli (cuit)", kcal:35, protein:2.4, portion:150},
-  {cat:"Légumes", name:"Courgette (cuite)", kcal:17, protein:1.2, portion:150},
-  {cat:"Légumes", name:"Concombre", kcal:15, protein:0.7, portion:100},
-  {cat:"Légumes", name:"Tomate", kcal:18, protein:0.9, portion:100},
-  {cat:"Légumes", name:"Salade verte", kcal:15, protein:1.4, portion:60},
-  {cat:"Légumes", name:"Carotte (cuite)", kcal:35, protein:0.8, portion:100},
-  {cat:"Légumes", name:"Épinards (cuits)", kcal:23, protein:2.9, portion:150},
-  {cat:"Légumes", name:"Poivron", kcal:20, protein:1, portion:100},
-  {cat:"Légumes", name:"Chou-fleur (cuit)", kcal:23, protein:1.8, portion:150},
+/* ============== BASE NUTRITIONNELLE (NUTRI_DB) ============== */
+// kcal100 / prot100 = valeurs pour 100g
+// units = valeurs par unité (kcal et prot totaux pour cette unité)
+// portion = grammes de la portion par défaut (pour mode 'g')
+const NUTRI_DB = [
+  // --- PROTÉINES ---
+  {cat:"Protéines", name:"Poulet (blanc, cuit)", kcal100:165, prot100:31, portion:150,
+    units:{"portion":{kcal:248,prot:46},"g":{kcal:1.65,prot:0.31}}},
+  {cat:"Protéines", name:"Dinde (cuite)", kcal100:150, prot100:29, portion:150,
+    units:{"portion":{kcal:225,prot:44},"g":{kcal:1.5,prot:0.29}}},
+  {cat:"Protéines", name:"Jambon blanc", kcal100:110, prot100:18, portion:50,
+    units:{"tranche":{kcal:55,prot:9},"portion":{kcal:110,prot:18},"g":{kcal:1.1,prot:0.18}}},
+  {cat:"Protéines", name:"Bœuf maigre (cuit)", kcal100:175, prot100:26, portion:150,
+    units:{"portion":{kcal:262,prot:39},"g":{kcal:1.75,prot:0.26}}},
+  {cat:"Protéines", name:"Veau (cuit)", kcal100:172, prot100:28, portion:150,
+    units:{"portion":{kcal:258,prot:42},"g":{kcal:1.72,prot:0.28}}},
+  {cat:"Protéines", name:"Steak haché 5% (cuit)", kcal100:140, prot100:21, portion:100,
+    units:{"pièce":{kcal:140,prot:21},"portion":{kcal:140,prot:21},"g":{kcal:1.4,prot:0.21}}},
+  {cat:"Protéines", name:"Œufs", kcal100:148, prot100:13, portion:55,
+    units:{"pièce":{kcal:81,prot:7},"g":{kcal:1.48,prot:0.13}}},
+  {cat:"Protéines", name:"Skyr nature", kcal100:63, prot100:11, portion:150,
+    units:{"pot":{kcal:95,prot:17},"portion":{kcal:95,prot:17},"bol":{kcal:126,prot:22},"g":{kcal:0.63,prot:0.11}}},
+  {cat:"Protéines", name:"Fromage blanc 0%", kcal100:48, prot100:8, portion:100,
+    units:{"bol":{kcal:96,prot:16},"portion":{kcal:48,prot:8},"g":{kcal:0.48,prot:0.08}}},
+  {cat:"Protéines", name:"Petits suisses nature", kcal100:85, prot100:8, portion:60,
+    units:{"pièce":{kcal:51,prot:5},"portion":{kcal:102,prot:10},"g":{kcal:0.85,prot:0.08}}},
+  {cat:"Protéines", name:"Yaourt grec nature", kcal100:97, prot100:9, portion:125,
+    units:{"pot":{kcal:121,prot:11},"portion":{kcal:121,prot:11},"g":{kcal:0.97,prot:0.09}}},
+  {cat:"Protéines", name:"Whey (poudre)", kcal100:380, prot100:75, portion:30,
+    units:{"portion":{kcal:114,prot:23},"c. à soupe":{kcal:38,prot:7.5},"g":{kcal:3.8,prot:0.75}}},
+  {cat:"Protéines", name:"Tofu", kcal100:145, prot100:15, portion:100,
+    units:{"portion":{kcal:145,prot:15},"g":{kcal:1.45,prot:0.15}}},
+  {cat:"Protéines", name:"Lentilles (cuites)", kcal100:116, prot100:9, portion:150,
+    units:{"portion":{kcal:174,prot:14},"bol":{kcal:232,prot:18},"g":{kcal:1.16,prot:0.09}}},
+  {cat:"Protéines", name:"Pois chiches (cuits)", kcal100:164, prot100:9, portion:150,
+    units:{"portion":{kcal:246,prot:14},"bol":{kcal:328,prot:18},"g":{kcal:1.64,prot:0.09}}},
+  {cat:"Protéines", name:"Haricots rouges (cuits)", kcal100:127, prot100:9, portion:150,
+    units:{"portion":{kcal:191,prot:14},"g":{kcal:1.27,prot:0.09}}},
+  // --- LÉGUMES ---
+  {cat:"Légumes", name:"Haricots verts (cuits)", kcal100:31, prot100:1.8, portion:150,
+    units:{"portion":{kcal:47,prot:2.7},"g":{kcal:0.31,prot:0.018}}},
+  {cat:"Légumes", name:"Brocoli (cuit)", kcal100:35, prot100:2.4, portion:150,
+    units:{"portion":{kcal:53,prot:3.6},"g":{kcal:0.35,prot:0.024}}},
+  {cat:"Légumes", name:"Courgette (cuite)", kcal100:17, prot100:1.2, portion:150,
+    units:{"portion":{kcal:26,prot:1.8},"g":{kcal:0.17,prot:0.012}}},
+  {cat:"Légumes", name:"Concombre", kcal100:15, prot100:0.7, portion:100,
+    units:{"portion":{kcal:15,prot:0.7},"g":{kcal:0.15,prot:0.007}}},
+  {cat:"Légumes", name:"Tomate", kcal100:18, prot100:0.9, portion:120,
+    units:{"pièce":{kcal:22,prot:1},"portion":{kcal:22,prot:1},"g":{kcal:0.18,prot:0.009}}},
+  {cat:"Légumes", name:"Salade verte", kcal100:15, prot100:1.4, portion:60,
+    units:{"bol":{kcal:9,prot:0.8},"portion":{kcal:9,prot:0.8},"poignée":{kcal:6,prot:0.6},"g":{kcal:0.15,prot:0.014}}},
+  {cat:"Légumes", name:"Carotte (cuite)", kcal100:35, prot100:0.8, portion:100,
+    units:{"pièce":{kcal:35,prot:0.8},"portion":{kcal:35,prot:0.8},"g":{kcal:0.35,prot:0.008}}},
+  {cat:"Légumes", name:"Épinards (cuits)", kcal100:23, prot100:2.9, portion:150,
+    units:{"portion":{kcal:35,prot:4.4},"g":{kcal:0.23,prot:0.029}}},
+  {cat:"Légumes", name:"Poivron", kcal100:20, prot100:1, portion:160,
+    units:{"pièce":{kcal:32,prot:1.6},"portion":{kcal:32,prot:1.6},"g":{kcal:0.2,prot:0.01}}},
+  {cat:"Légumes", name:"Chou-fleur (cuit)", kcal100:23, prot100:1.8, portion:150,
+    units:{"portion":{kcal:35,prot:2.7},"g":{kcal:0.23,prot:0.018}}},
+  {cat:"Légumes", name:"Champignons", kcal100:22, prot100:3.1, portion:80,
+    units:{"portion":{kcal:18,prot:2.5},"poignée":{kcal:18,prot:2.5},"g":{kcal:0.22,prot:0.031}}},
+  {cat:"Légumes", name:"Aubergine (cuite)", kcal100:25, prot100:1, portion:150,
+    units:{"portion":{kcal:38,prot:1.5},"g":{kcal:0.25,prot:0.01}}},
+  {cat:"Légumes", name:"Petits pois (cuits)", kcal100:81, prot100:5.4, portion:100,
+    units:{"portion":{kcal:81,prot:5.4},"g":{kcal:0.81,prot:0.054}}},
+  // --- FÉCULENTS ---
+  {cat:"Féculents", name:"Riz basmati (cuit)", kcal100:130, prot100:2.7, portion:150,
+    units:{"portion":{kcal:195,prot:4},"bol":{kcal:260,prot:5.4},"g":{kcal:1.3,prot:0.027}}},
+  {cat:"Féculents", name:"Quinoa (cuit)", kcal100:120, prot100:4.4, portion:150,
+    units:{"portion":{kcal:180,prot:6.6},"bol":{kcal:240,prot:8.8},"g":{kcal:1.2,prot:0.044}}},
+  {cat:"Féculents", name:"Patate douce (cuite)", kcal100:90, prot100:2, portion:200,
+    units:{"pièce":{kcal:180,prot:4},"portion":{kcal:180,prot:4},"g":{kcal:0.9,prot:0.02}}},
+  {cat:"Féculents", name:"Pommes de terre vapeur", kcal100:80, prot100:2, portion:130,
+    units:{"pièce":{kcal:104,prot:2.6},"portion":{kcal:160,prot:4},"g":{kcal:0.8,prot:0.02}}},
+  {cat:"Féculents", name:"Flocons d'avoine", kcal100:375, prot100:13, portion:50,
+    units:{"bol":{kcal:188,prot:6.5},"portion":{kcal:150,prot:5.2},"c. à soupe":{kcal:38,prot:1.3},"g":{kcal:3.75,prot:0.13}}},
+  {cat:"Féculents", name:"Pain complet", kcal100:250, prot100:9, portion:30,
+    units:{"tranche":{kcal:75,prot:2.7},"portion":{kcal:150,prot:5.4},"g":{kcal:2.5,prot:0.09}}},
+  {cat:"Féculents", name:"Pain de seigle", kcal100:240, prot100:8, portion:35,
+    units:{"tranche":{kcal:84,prot:2.8},"portion":{kcal:168,prot:5.6},"g":{kcal:2.4,prot:0.08}}},
+  {cat:"Féculents", name:"Pâtes complètes (cuites)", kcal100:124, prot100:4.5, portion:150,
+    units:{"portion":{kcal:186,prot:6.8},"bol":{kcal:248,prot:9},"g":{kcal:1.24,prot:0.045}}},
+  {cat:"Féculents", name:"Wrap complet", kcal100:290, prot100:8, portion:60,
+    units:{"pièce":{kcal:174,prot:4.8},"portion":{kcal:174,prot:4.8},"g":{kcal:2.9,prot:0.08}}},
+  // --- LIPIDES ---
+  {cat:"Lipides", name:"Huile d'olive ou colza", kcal100:900, prot100:0, portion:10,
+    units:{"c. à soupe":{kcal:81,prot:0},"c. à café":{kcal:40,prot:0},"g":{kcal:9,prot:0}}},
+  {cat:"Lipides", name:"Avocat", kcal100:160, prot100:2, portion:80,
+    units:{"pièce":{kcal:320,prot:4},"portion":{kcal:128,prot:1.6},"g":{kcal:1.6,prot:0.02}}},
+  {cat:"Lipides", name:"Amandes / noix", kcal100:600, prot100:20, portion:20,
+    units:{"poignée":{kcal:120,prot:4},"portion":{kcal:120,prot:4},"g":{kcal:6,prot:0.2}}},
+  {cat:"Lipides", name:"Graines de chia ou de lin", kcal100:480, prot100:17, portion:15,
+    units:{"c. à soupe":{kcal:48,prot:1.7},"portion":{kcal:72,prot:2.6},"g":{kcal:4.8,prot:0.17}}},
+  {cat:"Lipides", name:"Beurre de cacahuète", kcal100:590, prot100:25, portion:15,
+    units:{"c. à soupe":{kcal:89,prot:3.8},"c. à café":{kcal:30,prot:1.3},"g":{kcal:5.9,prot:0.25}}},
+  // --- FRUITS ---
+  {cat:"Fruits", name:"Banane", kcal100:90, prot100:1, portion:120,
+    units:{"pièce":{kcal:108,prot:1.2},"portion":{kcal:108,prot:1.2},"g":{kcal:0.9,prot:0.01}}},
+  {cat:"Fruits", name:"Fruits rouges", kcal100:50, prot100:1, portion:100,
+    units:{"bol":{kcal:75,prot:1.5},"poignée":{kcal:40,prot:0.8},"portion":{kcal:50,prot:1},"g":{kcal:0.5,prot:0.01}}},
+  {cat:"Fruits", name:"Pomme", kcal100:52, prot100:0.3, portion:180,
+    units:{"pièce":{kcal:94,prot:0.5},"portion":{kcal:94,prot:0.5},"g":{kcal:0.52,prot:0.003}}},
+  {cat:"Fruits", name:"Poire", kcal100:57, prot100:0.4, portion:160,
+    units:{"pièce":{kcal:91,prot:0.6},"portion":{kcal:91,prot:0.6},"g":{kcal:0.57,prot:0.004}}},
+  {cat:"Fruits", name:"Kiwi", kcal100:61, prot100:1.1, portion:80,
+    units:{"pièce":{kcal:49,prot:0.9},"portion":{kcal:49,prot:0.9},"g":{kcal:0.61,prot:0.011}}},
+  {cat:"Fruits", name:"Orange", kcal100:47, prot100:0.9, portion:180,
+    units:{"pièce":{kcal:85,prot:1.6},"portion":{kcal:85,prot:1.6},"g":{kcal:0.47,prot:0.009}}},
+  {cat:"Fruits", name:"Clémentine", kcal100:47, prot100:0.9, portion:80,
+    units:{"pièce":{kcal:38,prot:0.7},"portion":{kcal:76,prot:1.4},"g":{kcal:0.47,prot:0.009}}},
+  {cat:"Fruits", name:"Ananas", kcal100:50, prot100:0.5, portion:80,
+    units:{"tranche":{kcal:40,prot:0.4},"portion":{kcal:75,prot:0.8},"g":{kcal:0.5,prot:0.005}}},
+  {cat:"Fruits", name:"Mangue", kcal100:60, prot100:0.8, portion:150,
+    units:{"portion":{kcal:90,prot:1.2},"g":{kcal:0.6,prot:0.008}}},
+  {cat:"Fruits", name:"Compote sans sucres ajoutés", kcal100:45, prot100:0.3, portion:100,
+    units:{"pot":{kcal:45,prot:0.3},"portion":{kcal:45,prot:0.3},"g":{kcal:0.45,prot:0.003}}},
+  // --- REPAS PLAISIR ---
+  {cat:"Repas plaisir", name:"Pizza (part)", kcal100:266, prot100:11, portion:180,
+    units:{"part":{kcal:479,prot:20},"pièce":{kcal:479,prot:20},"g":{kcal:2.66,prot:0.11}}},
+  {cat:"Repas plaisir", name:"Burger", kcal100:280, prot100:13, portion:200,
+    units:{"pièce":{kcal:560,prot:26},"portion":{kcal:560,prot:26},"g":{kcal:2.8,prot:0.13}}},
+  {cat:"Repas plaisir", name:"Quiche lorraine (part)", kcal100:280, prot100:10, portion:150,
+    units:{"part":{kcal:420,prot:15},"pièce":{kcal:420,prot:15},"g":{kcal:2.8,prot:0.1}}},
+  {cat:"Repas plaisir", name:"Glace", kcal100:200, prot100:3, portion:80,
+    units:{"boule":{kcal:160,prot:2.4},"portion":{kcal:160,prot:2.4},"g":{kcal:2,prot:0.03}}},
+  {cat:"Repas plaisir", name:"Viennoiserie", kcal100:380, prot100:7, portion:80,
+    units:{"pièce":{kcal:304,prot:5.6},"portion":{kcal:304,prot:5.6},"g":{kcal:3.8,prot:0.07}}},
+  // --- PRODUITS LAITIERS / FROMAGES ---
+  {cat:"Produits laitiers", name:"Fêta", kcal100:264, prot100:14, portion:30,
+    units:{"portion":{kcal:79,prot:4.2},"g":{kcal:2.64,prot:0.14}}},
+  {cat:"Produits laitiers", name:"Halloumi", kcal100:315, prot100:21, portion:30,
+    units:{"tranche":{kcal:95,prot:6.3},"portion":{kcal:95,prot:6.3},"g":{kcal:3.15,prot:0.21}}},
+  {cat:"Produits laitiers", name:"Chèvre frais", kcal100:230, prot100:14, portion:30,
+    units:{"tranche":{kcal:69,prot:4.2},"portion":{kcal:69,prot:4.2},"g":{kcal:2.3,prot:0.14}}},
+  {cat:"Produits laitiers", name:"Fromage râpé", kcal100:380, prot100:26, portion:20,
+    units:{"c. à soupe":{kcal:57,prot:3.9},"portion":{kcal:76,prot:5.2},"g":{kcal:3.8,prot:0.26}}},
+  {cat:"Produits laitiers", name:"Mozzarella", kcal100:280, prot100:18, portion:60,
+    units:{"portion":{kcal:168,prot:10.8},"g":{kcal:2.8,prot:0.18}}},
+  {cat:"Produits laitiers", name:"Parmesan", kcal100:430, prot100:37, portion:10,
+    units:{"c. à soupe":{kcal:43,prot:3.7},"portion":{kcal:43,prot:3.7},"g":{kcal:4.3,prot:0.37}}},
+  {cat:"Produits laitiers", name:"Ricotta", kcal100:174, prot100:11, portion:50,
+    units:{"portion":{kcal:87,prot:5.5},"c. à soupe":{kcal:26,prot:1.7},"g":{kcal:1.74,prot:0.11}}},
+  {cat:"Produits laitiers", name:"Lait demi-écrémé", kcal100:46, prot100:3.2, portion:200,
+    units:{"verre":{kcal:92,prot:6.4},"portion":{kcal:92,prot:6.4},"g":{kcal:0.46,prot:0.032}}},
+  {cat:"Produits laitiers", name:"Lait végétal amande", kcal100:23, prot100:0.5, portion:200,
+    units:{"verre":{kcal:46,prot:1},"portion":{kcal:46,prot:1},"g":{kcal:0.23,prot:0.005}}},
+  {cat:"Produits laitiers", name:"Lait végétal soja", kcal100:33, prot100:3.3, portion:200,
+    units:{"verre":{kcal:66,prot:6.6},"portion":{kcal:66,prot:6.6},"g":{kcal:0.33,prot:0.033}}},
+  {cat:"Produits laitiers", name:"Lait végétal avoine", kcal100:45, prot100:1, portion:200,
+    units:{"verre":{kcal:90,prot:2},"portion":{kcal:90,prot:2},"g":{kcal:0.45,prot:0.01}}},
 ];
+
+// Compatibilité scanner (per-100g)
+const FOOD_DB = NUTRI_DB.map(n=>({cat:n.cat, name:n.name, kcal:n.kcal100, protein:n.prot100, portion:n.portion}));
+
+// Unités disponibles
+const UNITS = ['g','pièce','portion','tranche','c. à soupe','c. à café','verre','bol','poignée','boule','part'];
+
+/** Calcule kcal et protéines pour un aliment selon quantité + unité */
+function computeItemMacros(nom, quantite, unite){
+  const item = NUTRI_DB.find(n=>n.name===nom);
+  if(!item) return {kcal:0, prot:0};
+  const qty = Number(quantite) || 1;
+  if(unite==='g'){
+    return {
+      kcal: Math.round(item.kcal100 * qty / 100),
+      prot: Math.round(item.prot100 * qty / 100 * 10) / 10
+    };
+  }
+  const u = item.units[unite];
+  if(u){
+    return {
+      kcal: Math.round(u.kcal * qty),
+      prot: Math.round(u.prot * qty * 10) / 10
+    };
+  }
+  // fallback: per-100g
+  return {
+    kcal: Math.round(item.kcal100 * qty / 100),
+    prot: Math.round(item.prot100 * qty / 100 * 10) / 10
+  };
+}
 
 function getFoodLog(){
   return JSON.parse(localStorage.getItem(LS_FOODLOG) || "{}");
@@ -1481,7 +1661,7 @@ function populateScannerSelect(){
   const groups = {};
   FOOD_DB.forEach(f=>{ (groups[f.cat] = groups[f.cat]||[]).push(f); });
   sel.innerHTML = Object.keys(groups).map(cat=>
-    `<optgroup label="${cat}">` + groups[cat].map(f=>`<option value="${f.name}">${f.name}</option>`).join('') + `</optgroup>`
+    `<optgroup label="${cat}">` + groups[cat].map(f=>`<option value="${f.name}">${f.name}</option>`).oin('') + `</optgroup>`
   ).join('');
   updateScanPreview();
 }
@@ -1532,7 +1712,7 @@ function renderScanItems(){
       <div class="scan-item">
         <div>
           <div class="scan-name">${item.food}</div>
-          <div class="scan-meta">${item.grams} g — ${item.kcal} kcal · ${item.protein} g prot.</div>
+          <div class="scan-meta">${item.grams} g — ${item.kcal} kcall · ${item.protein} g prot.</div>
         </div>
         <button class="small-btn" onclick="removeScanItem(${idx})" style="background:var(--coral-light);color:var(--coral);">✕</button>
       </div>`).join('') +
@@ -1594,7 +1774,7 @@ function analyzeMealLocal(items){
       detail: isTrainingDay
         ? (hasCarbs
           ? "Glucides présents — bonne énergie pour la séance."
-          : "Jour d'entraînement : ajoute une source de glucides (riz, quinoa, patate douce…).")
+          : "Jour d'entraînement : ajoute une source de glucides (riz, quinoa, patate douce...).")
         : (hasCarbs
           ? "Jour de repos : tu peux réduire les féculents, surtout le soir."
           : "Bonne gestion des glucides pour un jour de repos."),
@@ -1684,7 +1864,7 @@ function deleteScanMeal(id){
 function renderScanMealLog(){
   const arr = getScannerMeals().slice().reverse();
   const wrap = document.getElementById('scanMealLog');
-  if(!wrap) return;
+  if('wrap') return;
   if(arr.length===0){
     wrap.innerHTML = `<div class="empty">Aucun repas analysé pour l'instant.</div>`;
     return;
@@ -1694,7 +1874,7 @@ function renderScanMealLog(){
     return `<div class="day-card" style="margin-bottom:8px;">
       <div style="padding:10px 12px;">
         <div class="row-between">
-          <span style="font-size:12.5px;font-weight:700;">${m.date} · ${m.time}</span>
+          <span style="font-size:12.5px;font-weight:700;">${m.date} · ${m.tim}</span>
           <span style="font-size:13px;color:${scoreColor};font-weight:800;">${'★'.repeat(m.score)}${'☆'.repeat(4-m.score)} ${m.score}/4</span>
         </div>
         <p class="muted" style="margin-top:3px;font-size:12.5px;">${m.items.map(i=>i.food).join(', ')}</p>
@@ -1838,18 +2018,27 @@ function buildMealFormHTML(){
       style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;min-height:58px;resize:none;background:#fafbfa;color:var(--text);"></textarea>
   </div>`;
 
-  // Section aliments avec calories/protéines
-  const foodOptions = FOOD_DB.map(f=>`<option value="${f.name}" data-kcal="${f.kcal}" data-prot="${f.protein}" data-portion="${f.portion}">${f.name}</option>`).join('');
+  // Section aliments avec calories/protéines (quantité + unité + précision)
+  const groups = {};
+  NUTRI_DB.forEach(f=>{ (groups[f.cat] = groups[f.cat]||[]).push(f); });
+  const foodOptionGroups = Object.keys(groups).map(cat=>
+    `<optgroup label="${cat}">`+groups[cat].map(f=>`<option value="${f.name}">${f.name}</option>`).join('')+`</optgroup>`
+  ).join('');
+  const unitOptions = UNITS.map(u=>`<option value="${u}">${u}</option>`).join('');
   h += `<div class="field" style="margin-top:10px;">
     <label style="font-size:13px;font-weight:700;color:var(--accent);">🔢 Aliments & macros (facultatif)</label>
-    <div style="display:flex;gap:6px;margin-top:6px;margin-bottom:6px;">
-      <select id="mealFoodSelect" onchange="updateMealFoodSelect()" style="flex:2;border:1px solid var(--border);border-radius:10px;padding:8px 6px;font-size:12.5px;background:#fafbfa;">
+    <div class="food-item-row" style="margin-top:8px;">
+      <select id="mealFoodSelect" onchange="updateMealFoodSelect()" style="flex:3;min-width:0;">
         <option value="">-- Choisir un aliment --</option>
-        ${foodOptions}
+        ${foodOptionGroups}
         <option value="__libre__">✏️ Autre (saisie libre)</option>
       </select>
-      <input type="number" id="mealFoodGrams" placeholder="g" oninput="updateMealItemPreview()" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;text-align:center;min-width:52px;">
+      <input type="number" id="mealFoodQty" placeholder="qté" oninput="updateMealItemPreview()" style="width:52px;text-align:center;">
+      <select id="mealFoodUnit" onchange="updateMealUnitOptions();updateMealItemPreview()" style="flex:2;min-width:0;">
+        ${unitOptions}
+      </select>
     </div>
+    <input type="text" id="mealFoodPrecision" placeholder="Précision optionnelle (ex : brouillés, al dente…)" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;margin-top:5px;margin-bottom:5px;background:#fafbfa;">
     <div id="mealFoodLibre" style="display:none;margin-bottom:8px;">
       <input type="text" id="mealFoodName" placeholder="Nom de l'aliment" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:13px;margin-bottom:6px;">
       <div style="display:flex;gap:6px;">
@@ -1881,7 +2070,21 @@ function updateMealFoodSelect(){
   const libre = document.getElementById('mealFoodLibre');
   if(!sel || !libre) return;
   libre.style.display = sel.value === '__libre__' ? 'block' : 'none';
+  updateMealUnitOptions();
   updateMealItemPreview();
+}
+
+function updateMealUnitOptions(){
+  const sel = document.getElementById('mealFoodSelect');
+  const unitSel = document.getElementById('mealFoodUnit');
+  if(!sel || !unitSel) return;
+  const item = NUTRI_DB.find(n=>n.name===sel.value);
+  if(!item){ unitSel.innerHTML = UNITS.map(u=>`<option value="${u}">${u}</option>`).join(''); return; }
+  const availableUnits = Object.keys(item.units).filter(u=>u!=='g');
+  const ordered = ['g', ...availableUnits];
+  unitSel.innerHTML = ordered.map(u=>`<option value="${u}">${u}</option>`).join('');
+  // default: first non-g unit if exists
+  if(availableUnits.length > 0) unitSel.value = availableUnits[0];
 }
 
 function updateMealItemPreview(){
@@ -1889,40 +2092,37 @@ function updateMealItemPreview(){
   const preview = document.getElementById('mealFoodPreview');
   if(!sel || !preview) return;
   if(!sel.value || sel.value === '__libre__'){ preview.textContent = ''; return; }
-  const food = FOOD_DB.find(f=>f.name===sel.value);
-  if(!food){ preview.textContent = ''; return; }
-  const grams = Number(document.getElementById('mealFoodGrams').value) || food.portion;
-  const kcal = Math.round(food.kcal * grams / 100);
-  const prot = Math.round(food.protein * grams / 100 * 10) / 10;
-  preview.textContent = `→ ${kcal} kcal · ${prot} g protéines pour ${grams} g`;
+  const unit = (document.getElementById('mealFoodUnit')||{value:'g'}).value || 'g';
+  const qty = Number((document.getElementById('mealFoodQty')||{value:0}).value) || (unit==='g' ? (NUTRI_DB.find(n=>n.name===sel.value)||{portion:100}).portion : 1);
+  const macros = computeItemMacros(sel.value, qty, unit);
+  preview.textContent = `→ ${macros.kcal} kcal · ${macros.prot} g protéines pour ${qty} ${unit}`;
 }
 
 function addMealFoodItem(){
   const sel = document.getElementById('mealFoodSelect');
   if(!sel) return;
   let item;
+  const precision = (document.getElementById('mealFoodPrecision')||{value:''}).value.trim();
   if(sel.value === '__libre__'){
     const name = (document.getElementById('mealFoodName')||{value:''}).value.trim() || 'Aliment';
     const kcal = Number((document.getElementById('mealFoodKcalLibre')||{value:0}).value) || 0;
     const prot = Number((document.getElementById('mealFoodProtLibre')||{value:0}).value) || 0;
-    item = {name, grams:null, kcal, prot, libre:true};
+    item = {nom:name, quantite:1, unite:'portion', precision, kcal, prot, libre:true};
     if(document.getElementById('mealFoodName')) document.getElementById('mealFoodName').value = '';
     if(document.getElementById('mealFoodKcalLibre')) document.getElementById('mealFoodKcalLibre').value = '';
     if(document.getElementById('mealFoodProtLibre')) document.getElementById('mealFoodProtLibre').value = '';
   } else if(sel.value){
-    const food = FOOD_DB.find(f=>f.name===sel.value);
-    if(!food) return;
-    const grams = Number(document.getElementById('mealFoodGrams').value) || food.portion;
-    const kcal = Math.round(food.kcal * grams / 100);
-    const prot = Math.round(food.protein * grams / 100 * 10) / 10;
-    item = {name:food.name, grams, kcal, prot, libre:false};
+    const unit = (document.getElementById('mealFoodUnit')||{value:'g'}).value || 'g';
+    const qty = Number((document.getElementById('mealFoodQty')||{value:0}).value) || (unit==='g' ? (NUTRI_DB.find(n=>n.name===sel.value)||{portion:100}).portion : 1);
+    const macros = computeItemMacros(sel.value, qty, unit);
+    item = {nom:sel.value, quantite:qty, unite:unit, precision, kcal:macros.kcal, prot:macros.prot, libre:false};
   } else return;
   currentMealItems.push(item);
   renderMealItemsList();
   updateMealScore();
   sel.value = '';
-  const gramsEl = document.getElementById('mealFoodGrams');
-  if(gramsEl) gramsEl.value = '';
+  if(document.getElementById('mealFoodQty')) document.getElementById('mealFoodQty').value = '';
+  if(document.getElementById('mealFoodPrecision')) document.getElementById('mealFoodPrecision').value = '';
   const preview = document.getElementById('mealFoodPreview');
   if(preview) preview.textContent = '';
   const libre = document.getElementById('mealFoodLibre');
@@ -1941,15 +2141,19 @@ function renderMealItemsList(){
   if(currentMealItems.length === 0){ wrap.innerHTML = ''; return; }
   const totalKcal = currentMealItems.reduce((s,i)=>s+i.kcal,0);
   const totalProt = Math.round(currentMealItems.reduce((s,i)=>s+i.prot,0)*10)/10;
-  wrap.innerHTML = currentMealItems.map((it,i)=>`
-    <div class="scan-item">
+  wrap.innerHTML = currentMealItems.map((it,i)=>{
+    // Ligne affichée: Œuf — 2 pièces — brouillés — 140 kcal — 12 g prot.
+    const parts = [it.nom];
+    if(it.quantite && it.unite) parts.push(`${it.quantite} ${it.unite}`);
+    if(it.precision) parts.push(it.precision);
+    return `<div class="scan-item">
       <div>
-        <div class="scan-name">${it.name}${it.grams?` (${it.grams} g)`:''}</div>
+        <div class="scan-name">${parts.join(' · ')}</div>
         <div class="scan-meta">${it.kcal} kcal · ${it.prot} g prot.</div>
       </div>
       <button class="small-btn" style="background:var(--coral-light);color:var(--coral);" onclick="removeMealFoodItem(${i})">✕</button>
-    </div>
-  `).join('') +
+    </div>`;
+  }).join('') +
   `<div class="scan-total-bar" style="margin-top:8px;"><strong>Total repas</strong><span><strong>${totalKcal} kcal</strong> · ${totalProt} g prot.</span></div>`;
 }
 
@@ -1990,7 +2194,7 @@ function recalculerSuiviDuJour(date){
   const wrap = document.getElementById('calorieSummary');
   if(!wrap) return;
 
-  const hasData = totalKcal>0 || totalProt>0;
+  const hasData = mealCount > 0 || totalKcal > 0 || totalProt > 0;
   wrap.innerHTML = hasData ? `
     <div style="display:flex;align-items:center;gap:18px;margin-top:6px;">
       <div class="ring-wrap">
@@ -2017,6 +2221,86 @@ function recalculerSuiviDuJour(date){
     </div>
     <div style="margin-top:10px;background:var(--accent-light);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--accent);">💡 ${conseil}</div>
   ` : `<div class="empty" style="margin-top:8px;">Aucun repas enregistré aujourd'hui.<br><span style="font-size:12px;color:var(--muted);">Ajoute un repas dans le Journal pour voir le résumé.</span></div>`;
+}
+
+/** Génère un résumé textuel de la journée alimentaire */
+function genererResumeDuJour(date){
+  const meals = getMeals().filter(m=>m.date===date);
+  if(meals.length===0) return "Aucun repas enregistré aujourd'hui pour le moment.";
+  const totalKcal = meals.reduce((s,m)=>s+(m.totalKcal||0),0);
+  const totalProt = Math.round(meals.reduce((s,m)=>s+(m.totalProt||0),0)*10)/10;
+  const scores = meals.filter(m=>m.score!==undefined).map(m=>m.score);
+  const avgScore = scores.length ? Math.round(scores.reduce((a,v)=>a+v,0)/scores.length*10)/10 : null;
+  const typeLabels = {petitdej:'Petit-déjeuner',dejeuner:'Déjeuner',collation:'Collation',diner:'Dîner',plaisir:'Repas plaisir'};
+  const parts = [];
+  parts.push(`${meals.length} repas enregistré${meals.length>1?'s':''} aujourd'hui.`);
+  if(totalKcal>0) parts.push(`Total : ${totalKcal} kcal${totalProt>0?`, ${totalProt} g de protéines`:''}.`);
+  if(avgScore!==null) parts.push(`Score moyen : ${avgScore}/10.`);
+  meals.forEach(m=>{
+    const type = m.type ? (typeLabels[m.type]||m.type) : 'Repas';
+    const alimParts = [];
+    if(m.aliments && m.aliments.length>0){
+      alimParts.push(m.aliments.map(a=>{
+        let s = `${a.quantite} ${a.unite} ${a.nom}`;
+        if(a.precision) s += ` (${a.precision})`;
+        return s;
+      }).join(', '));
+    } else {
+      const chips = [...(m.proteins||[]),...(m.legumes||[]),...(m.feculents||[]),...(m.lipides||[]),...(m.fruits||[]),...(m.plaisir||[]),...(m.dairy||[])];
+      if(chips.length>0) alimParts.push(chips.join(', '));
+    }
+    const line = `${type}${m.time?' ('+m.time+')':''} : ${alimParts.join('') || '(chips sélectionnés)'}${m.totalKcal>0?' — '+m.totalKcal+' kcal':''}`;
+    parts.push(line);
+  });
+  return parts.join('\n');
+}
+
+/** Prépare le contexte pour un futur coach IA — aucune clé API ici */
+function preparerContexteCoachIA(date){
+  const meals = getMeals().filter(m=>m.date===date);
+  const totalKcal = meals.reduce((s,m)=>s+(m.totalKcal||0),0);
+  const totalProt = Math.round(meals.reduce((s,m)=>s+(m.totalProt||0),0)*10)/10;
+  const scores = meals.filter(m=>m.score!==undefined).map(m=>m.score);
+  const avgScore = scores.length ? Math.round(scores.reduce((a,v)=>a+v,0)/scores.length*10)/10 : null;
+  const plaisirCount = meals.filter(m=>m.type==='plaisir'||(m.plaisir&&m.plaisir.length>0)||(m.deviation&&m.deviation!=='aucun')).length;
+  const strengths = [], improvements = [];
+  const hasProteins = meals.some(m=>(m.proteins||[]).length>0||((m.dairy||[]).some(d=>DAIRY_PROTEIN_ITEMS.includes(d))));
+  const hasVeggies = meals.some(m=>(m.legumes||[]).length>0);
+  const hasFruits = meals.some(m=>(m.fruits||[]).length>0);
+  if(hasProteins) strengths.push("Protéines présentes dans la journée");
+  if(hasVeggies) strengths.push("Légumes présents");
+  if(hasFruits) strengths.push("Fruits consommés");
+  if(avgScore!==null && avgScore>=7) strengths.push(`Score moyen élevé (${avgScore}/10)`);
+  if(!hasProteins) improvements.push("Ajouter une source de protéines");
+  if(!hasVeggies) improvements.push("Ajouter des légumes");
+  if(plaisirCount>0) improvements.push(`${plaisirCount} repas plaisir/écart — à rééquilibrer sur la semaine`);
+  const target = getCalorieTarget();
+  const burned = getBurnedTotal(date);
+  let conseil = "";
+  if(meals.length===0) conseil = "Aucun repas enregistré, pensez à suivre vos repas.";
+  else if(!hasProteins) conseil = "Priorité : ajouter une source de protéines à chaque repas pour préserver la masse musculaire.";
+  else if(!hasVeggies) conseil = "Pensez à intégrer des légumes pour améliorer la satiété et les fibres.";
+  else if(avgScore!==null && avgScore>=7) conseil = "Belle journée alimentaire, continuez comme ça !";
+  else conseil = "Bonne journée dans l'ensemble, restez bien hydratée entre les repas.";
+  return {
+    date,
+    repas: meals.map(m=>({
+      id:m.id, type:m.type, heure:m.time, score:m.score,
+      aliments:m.aliments||[],
+      chips:{proteins:m.proteins||[],legumes:m.legumes||[],feculents:m.feculents||[],lipides:m.lipides||[],fruits:m.fruits||[],plaisir:m.plaisir||[],dairy:m.dairy||[]},
+      totalKcal:m.totalKcal||0, totalProt:m.totalProt||0,
+      deviation:m.deviation, feeling:m.feeling, analyse:m.analysis
+    })),
+    totalKcal, totalProt, avgScore, plaisirCount,
+    objectifKcal: target, kcalBrulees: burned, netTarget: target+burned,
+    strengths, improvements, conseil
+  };
+}
+
+/** Wrapper : met à jour tous les affichages de l'interface */
+function mettreAJourInterface(){
+  renderMealJournal();
+  recalculerSuiviDuJour(todayISO());
 }
 
 function handleMealPhoto(evt){
@@ -2151,8 +2435,17 @@ function saveMeal(){
   const analysis = computeMealAnalysis(currentMeal);
   const totalKcal = currentMealItems.reduce((s,i)=>s+i.kcal,0);
   const totalProt = Math.round(currentMealItems.reduce((s,i)=>s+i.prot,0)*10)/10;
+  // Catégories présentes (pour coach IA)
+  const categoriesPresentes = [];
+  if(currentMeal.proteins.length>0) categoriesPresentes.push('proteines');
+  if(currentMeal.legumes.length>0) categoriesPresentes.push('legumes');
+  if(currentMeal.feculents.length>0) categoriesPresentes.push('feculents');
+  if(currentMeal.lipides.length>0) categoriesPresentes.push('lipides');
+  if(currentMeal.fruits.length>0) categoriesPresentes.push('fruits');
+  if(currentMeal.plaisir.length>0) categoriesPresentes.push('plaisir');
+  if(currentMeal.dairy.length>0) categoriesPresentes.push('dairy');
   const entry = {
-    id:Date.now(), v:3,
+    id:Date.now(), v:4,
     date:todayISO(),
     time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
     photo:currentMeal.photo,
@@ -2161,22 +2454,25 @@ function saveMeal(){
     feculents:[...currentMeal.feculents], lipides:[...currentMeal.lipides],
     fruits:[...currentMeal.fruits], plaisir:[...currentMeal.plaisir],
     dairy:[...currentMeal.dairy],
+    // Nouveau : aliments avec quantités/unités
+    aliments: currentMealItems.map(it=>({
+      nom:it.nom, quantite:it.quantite, unite:it.unite,
+      precision:it.precision||'', calories:it.kcal, proteines:it.prot, libre:it.libre||false
+    })),
+    categoriesPresentes,
     deviation:currentMeal.deviation, feeling:currentMeal.feeling,
     comment:currentMeal.comment, score, analysis,
-    items:[...currentMealItems], totalKcal, totalProt,
-    // Structure IA-ready pour future analyse coach
-    _meta:{appVersion:3, savedAt:Date.now()}
+    totalKcal, totalProt,
+    _meta:{appVersion:4, savedAt:Date.now()}
   };
   const arr = getMeals(); arr.push(entry); setMeals(arr);
   closeMealForm();
-  renderMealJournal();
-  recalculerSuiviDuJour(todayISO());
+  mettreAJourInterface();
 }
 
 function deleteMeal(id){
   let arr = getMeals(); arr = arr.filter(m=>m.id!==id); setMeals(arr);
-  renderMealJournal();
-  recalculerSuiviDuJour(todayISO());
+  mettreAJourInterface();
 }
 
 function renderMealJournal(){
@@ -2217,6 +2513,7 @@ function renderMealJournal(){
           </div>
           ${allIngr.length?`<p class="muted" style="margin-top:3px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${allIngr.join(', ')}</p>`:''}
           ${(m.totalKcal>0||m.totalProt>0)?`<p style="margin-top:3px;font-size:12px;font-weight:700;color:var(--accent);">${m.totalKcal} kcal · ${m.totalProt} g prot.</p>`:''}
+          ${(m.aliments&&m.aliments.length>0)?`<div style="margin-top:3px;">${m.aliments.slice(0,5).map(a=>{let s=`${a.quantite} ${a.unite} ${a.nom}`;if(a.precision)s+=` (${a.precision})`;return`<span style="font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:2px 7px;border-radius:999px;margin-right:3px;margin-bottom:2px;display:inline-block;">${s}</span>`;}).join('')}${m.aliments.length>5?`<span class="muted" style="font-size:11px;">+${m.aliments.length-5}</span>`:''}</div>`:''}
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
             ${devLbl?`<span style="font-size:11px;background:var(--coral-light);color:var(--coral);padding:2px 8px;border-radius:999px;font-weight:600;">${devLbl}</span>`:''}
             ${feelLbl?`<span style="font-size:11px;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:999px;font-weight:600;border:1px solid var(--border);">${feelLbl}</span>`:''}
@@ -2380,6 +2677,137 @@ function importData(event){
   reader.readAsText(file);
 }
 
+/* ============== IDÉES REPAS ============== */
+
+const IDEES_REPAS = [
+  {
+    cat:"☀️ Petit-déjeuner", items:[
+      {nom:"Skyr + flocons d'avoine + fruits rouges", detail:"Skyr 150g, flocons d'avoine 40g, fruits rouges 80g", macros:"~320 kcal · 22g prot.",
+        aliments:[{nom:"Skyr nature",q:1,u:"portion"},{nom:"Flocons d'avoine",q:1,u:"bol"},{nom:"Fruits rouges",q:1,u:"poignée"}]},
+      {nom:"2 œufs brouillés + pain complet + jambon", detail:"2 œufs, 1 tranche pain complet, 1 tranche jambon blanc", macros:"~290 kcal · 24g prot.",
+        aliments:[{nom:"Œufs",q:2,u:"pièce",p:"brouillés"},{nom:"Pain complet",q:1,u:"tranche"},{nom:"Jambon blanc",q:1,u:"tranche"}]},
+      {nom:"Yaourt grec + banane + amandes", detail:"Yaourt grec 125g, 1 banane, poignée amandes", macros:"~340 kcal · 16g prot.",
+        aliments:[{nom:"Yaourt grec nature",q:1,u:"pot"},{nom:"Banane",q:1,u:"pièce"},{nom:"Amandes / noix",q:1,u:"poignée"}]},
+    ]
+  },
+  {
+    cat:"🥗 Déjeuner", items:[
+      {nom:"Poulet + quinoa + courgettes + fêta", detail:"Poulet 150g, quinoa 150g, courgettes, fêta 30g", macros:"~530 kcal · 55g prot.",
+        aliments:[{nom:"Poulet (blanc, cuit)",q:1,u:"portion"},{nom:"Quinoa (cuit)",q:1,u:"portion"},{nom:"Courgette (cuite)",q:1,u:"portion"},{nom:"Fêta",q:1,u:"portion"}]},
+      {nom:"Dinde + riz + haricots verts", detail:"Dinde 150g, riz basmati 150g, haricots verts 150g", macros:"~495 kcal · 51g prot.",
+        aliments:[{nom:"Dinde (cuite)",q:1,u:"portion"},{nom:"Riz basmati (cuit)",q:1,u:"portion"},{nom:"Haricots verts (cuits)",q:1,u:"portion"}]},
+      {nom:"Bowl lentilles + légumes + œuf", detail:"Lentilles 150g, épinards 150g, 1 œuf, huile d'olive", macros:"~430 kcal · 30g prot.",
+        aliments:[{nom:"Lentilles (cuites)",q:1,u:"portion"},{nom:"Épinards (cuits)",q:1,u:"portion"},{nom:"Œufs",q:1,u:"pièce"},{nom:"Huile d'olive ou colza",q:1,u:"c. à soupe"}]},
+    ]
+  },
+  {
+    cat:"🍎 Collation", items:[
+      {nom:"Skyr + fruits rouges", detail:"Skyr 150g, fruits rouges 80g", macros:"~140 kcal · 18g prot.",
+        aliments:[{nom:"Skyr nature",q:1,u:"portion"},{nom:"Fruits rouges",q:1,u:"poignée"}]},
+      {nom:"Petits suisses + pomme", detail:"2 petits suisses, 1 pomme", macros:"~145 kcal · 9g prot.",
+        aliments:[{nom:"Petits suisses nature",q:2,u:"pièce"},{nom:"Pomme",q:1,u:"pièce"}]},
+      {nom:"Amandes + banane", detail:"20g amandes, 1 banane", macros:"~228 kcal · 5g prot.",
+        aliments:[{nom:"Amandes / noix",q:1,u:"poignée"},{nom:"Banane",q:1,u:"pièce"}]},
+    ]
+  },
+  {
+    cat:"🌙 Dîner", items:[
+      {nom:"Œufs brouillés + légumes + fêta", detail:"2 œufs, poivron, champignons, fêta 30g", macros:"~335 kcal · 26g prot.",
+        aliments:[{nom:"Œufs",q:2,u:"pièce",p:"brouillés"},{nom:"Poivron",q:1,u:"pièce"},{nom:"Champignons",q:1,u:"poignée"},{nom:"Fêta",q:1,u:"portion"}]},
+      {nom:"Tofu + patate douce + brocoli", detail:"Tofu 100g, patate douce, brocoli 150g", macros:"~390 kcal · 22g prot.",
+        aliments:[{nom:"Tofu",q:1,u:"portion"},{nom:"Patate douce (cuite)",q:1,u:"pièce"},{nom:"Brocoli (cuit)",q:1,u:"portion"}]},
+      {nom:"Poulet + salade + avocat", detail:"Poulet 150g, salade, ½ avocat, huile d'olive", macros:"~430 kcal · 48g prot.",
+        aliments:[{nom:"Poulet (blanc, cuit)",q:1,u:"portion"},{nom:"Salade verte",q:1,u:"bol"},{nom:"Avocat",q:0.5,u:"pièce"},{nom:"Huile d'olive ou colza",q:1,u:"c. à soupe"}]},
+    ]
+  },
+  {
+    cat:"⚡ Avant sport", items:[
+      {nom:"Banane + yaourt grec + flocons", detail:"1 banane, yaourt grec 125g, flocons 30g", macros:"~360 kcal · 14g prot.",
+        aliments:[{nom:"Banane",q:1,u:"pièce"},{nom:"Yaourt grec nature",q:1,u:"pot"},{nom:"Flocons d'avoine",q:3,u:"c. à soupe"}]},
+      {nom:"Pain complet + jambon + fromage blanc", detail:"2 tranches pain complet, jambon, fromage blanc", macros:"~370 kcal · 27g prot.",
+        aliments:[{nom:"Pain complet",q:2,u:"tranche"},{nom:"Jambon blanc",q:2,u:"tranche"},{nom:"Fromage blanc 0%",q:1,u:"bol"}]},
+    ]
+  },
+  {
+    cat:"💪 Après sport", items:[
+      {nom:"Skyr + whey + fruits rouges", detail:"Skyr 150g, whey 30g, fruits rouges", macros:"~320 kcal · 45g prot.",
+        aliments:[{nom:"Skyr nature",q:1,u:"portion"},{nom:"Whey (poudre)",q:1,u:"portion"},{nom:"Fruits rouges",q:1,u:"poignée"}]},
+      {nom:"Poulet + riz + salade", detail:"Poulet 150g, riz 150g, salade verte", macros:"~500 kcal · 48g prot.",
+        aliments:[{nom:"Poulet (blanc, cuit)",q:1,u:"portion"},{nom:"Riz basmati (cuit)",q:1,u:"portion"},{nom:"Salade verte",q:1,u:"bol"}]},
+    ]
+  },
+  {
+    cat:"🫧 Repas léger", items:[
+      {nom:"Soupe légumes + pain complet", detail:"Légumes variés, 1 tranche pain complet", macros:"~180 kcal · 8g prot.",
+        aliments:[{nom:"Courgette (cuite)",q:1,u:"portion"},{nom:"Carotte (cuite)",q:1,u:"pièce"},{nom:"Pain complet",q:1,u:"tranche"}]},
+      {nom:"Salade composée protéinée", detail:"Salade, tomate, concombre, œuf, jambon", macros:"~280 kcal · 22g prot.",
+        aliments:[{nom:"Salade verte",q:1,u:"bol"},{nom:"Tomate",q:1,u:"pièce"},{nom:"Concombre",q:1,u:"portion"},{nom:"Œufs",q:1,u:"pièce"},{nom:"Jambon blanc",q:1,u:"tranche"}]},
+    ]
+  },
+  {
+    cat:"🍕 Repas plaisir mieux maítrisé", items:[
+      {nom:"Pizza + salade verte", detail:"1-2 parts pizza + grande salade", macros:"~600 kcal · 23g prot.",
+        aliments:[{nom:"Pizza (part)",q:1,u:"part"},{nom:"Salade verte",q:1,u:"bol"},{nom:"Huile d'olive ou colza",q:1,u:"c. à soupe"}]},
+      {nom:"Burger + légumes crus", detail:"1 burger + crudités à la place des frites", macros:"~620 kcal · 30g prot.",
+        aliments:[{nom:"Burger",q:1,u:"pièce"},{nom:"Concombre",q:0.5,u:"portion"},{nom:"Tomate",q:1,u:"pièce"}]},
+    ]
+  },
+  {
+    cat:"☀️ Jours de forte chaleur", items:[
+      {nom:"Salade fraîche complète", detail:"Concombre, tomates, pois chiches, fêta, huile d'olive", macros:"~380 kcal · 17g prot.",
+        aliments:[{nom:"Concombre",q:1,u:"portion"},{nom:"Tomate",q:1,u:"pièce"},{nom:"Pois chiches (cuits)",q:1,u:"portion"},{nom:"Fêta",q:1,u:"portion"},{nom:"Huile d'olive ou colza",q:1,u:"c. à soupe"}]},
+      {nom:"Gaspacho + pain complet + fromage blanc", detail:"Légumes froids, yaourt glacé, hydratation max", macros:"~250 kcal · 15g prot.",
+        aliments:[{nom:"Tomate",q:2,u:"pièce"},{nom:"Concombre",q:0.5,u:"portion"},{nom:"Pain complet",q:1,u:"tranche"},{nom:"Fromage blanc 0%",q:1,u:"bol"}]},
+    ]
+  },
+  {
+    cat:"🥩 Options riches en protéines", items:[
+      {nom:"Blanc de poulet + œufs + quinoa", detail:"Poulet 150g + 2 œufs + quinoa 150g", macros:"~590 kcal · 70g prot.",
+        aliments:[{nom:"Poulet (blanc, cuit)",q:1,u:"portion"},{nom:"Œufs",q:2,u:"pièce"},{nom:"Quinoa (cuit)",q:1,u:"portion"}]},
+      {nom:"Skyr + whey + amandes", detail:"Skyr 150g + whey 30g + amandes", macros:"~330 kcal · 48g prot.",
+        aliments:[{nom:"Skyr nature",q:1,u:"portion"},{nom:"Whey (poudre)",q:1,u:"portion"},{nom:"Amandes / noix",q:1,u:"poignée"}]},
+    ]
+  },
+];
+
+function renderIdeesRepas(){
+  const wrap = document.getElementById('ideesRepasAccordeons');
+  if(!wrap) return;
+  wrap.innerHTML = IDEES_REPAS.map((cat,ci)=>`
+    <div class="idee-group" id="idee-group-${ci}">
+      <div class="idee-group-head" onclick="document.getElementById('idee-group-${ci}').classList.toggle('open')">
+        <span>${cat.cat}</span>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="idee-group-body">
+        ${cat.items.map((idee,ii)=>`
+          <div class="idee-card">
+            <div class="idee-name">${idee.nom}</div>
+            <div class="idee-detail">${idee.detail}</div>
+            <div class="idee-macros">${idee.macros}</div>
+            <button class="small-btn" style="margin-top:8px;" onclick='utiliserIdeeRepas(${ci},${ii})'>Utiliser comme modèle</button>
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function utiliserIdeeRepas(catIdx, itemIdx){
+  const idee = IDEES_REPAS[catIdx].items[itemIdx];
+  // Pré-remplir le formulaire repas
+  showTab('diete');
+  openMealForm();
+  // Charger les aliments dans le formulaire
+  idee.aliments.forEach(a=>{
+    const macros = computeItemMacros(a.nom, a.q, a.u);
+    currentMealItems.push({nom:a.nom, quantite:a.q, unite:a.u, precision:a.p||'', kcal:macros.kcal, prot:macros.prot, libre:false});
+  });
+  renderMealItemsList();
+  updateMealScore();
+  // Scroller vers le formulaire
+  setTimeout(()=>{ const el=document.getElementById('mealFormCard'); if(el) el.scrollIntoView({behavior:'smooth'}); },200);
+}
+
 /* ============== INIT ============== */
 
 function refreshAll(){
@@ -2390,6 +2818,7 @@ function refreshAll(){
   renderWater();
   renderCalories();
   renderMealJournal();
+  renderIdeesRepas();
   renderMeasures();
   renderBurned();
   renderRecovery();
@@ -2411,5 +2840,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
- 
-
