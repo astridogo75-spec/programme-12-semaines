@@ -127,7 +127,7 @@
     background:#fafbfa;
   }
   .day-head.today{background:var(--accent-light);}
-  .day-icons
+  .day-icon{
     width:36px;height:36px;border-radius:50%;background:var(--accent-light);color:var(--accent);
     display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-right:10px;
   }
@@ -347,6 +347,26 @@
   /* --- Formulaire repas — quantités --- */
   .food-item-row{display:flex;gap:5px;align-items:center;margin-bottom:6px;}
   .food-item-row select,.food-item-row input{border:1px solid var(--border);border-radius:8px;padding:7px 6px;font-size:12.5px;background:#fafbfa;}
+  /* --- Synthèse de mon assiette --- */
+  #synthese-card .synthese-empty{text-align:center;color:var(--muted);font-size:13px;padding:18px 0;}
+  .synthese-result{background:var(--bg);border-radius:14px;padding:12px 14px;}
+  .synthese-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;margin:2px 3px 2px 0;}
+  .synthese-pill.ok{background:var(--mint-light);color:var(--accent);}
+  .synthese-pill.nok{background:var(--coral-light);color:var(--coral);}
+  .synthese-pill.neutral{background:var(--accent-light);color:var(--accent);}
+  /* --- Bon à savoir accordéons --- */
+  .bsa-item{border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden;}
+  .bsa-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 14px;background:#fafbfa;cursor:pointer;
+    font-size:13.5px;font-weight:700;user-select:none;-webkit-user-select:none;
+  }
+  .bsa-item.open .bsa-head{background:var(--accent-light);color:var(--accent);}
+  .bsa-body{display:none;padding:4px 14px 14px;font-size:13px;color:var(--muted);line-height:1.6;}
+  .bsa-item.open .bsa-body{display:block;}
+  /* --- Navbar 5 onglets --- */
+  nav.tabbar button{font-size:10px;}
+  nav.tabbar svg{width:20px;height:20px;}
 </style>
 </head>
 <body>
@@ -386,7 +406,7 @@
             <div style="font-weight:700;font-size:14px;color:var(--accent);">💡 Besoin d'inspiration ?</div>
             <div class="muted" style="font-size:12.5px;margin-top:2px;">Idées de repas équilibrés et plaisir</div>
           </div>
-          <button class="small-btn" onclick="showTab('diete');setTimeout(()=>document.getElementById('idees-repas-card').scrollIntoView({behavior:'smooth'}),200)">Voir les idées</button>
+          <button class="small-btn" onclick="showTab('idees');setTimeout(()=>document.getElementById('idees-repas-card').scrollIntoView({behavior:'smooth'}),100)">Voir les idées</button>
         </div>
       </div>
 
@@ -470,22 +490,20 @@
       <div id="weekSchedule"></div>
     </section>
 
-    <!-- DIETE -->
+    <!-- REPAS -->
     <section class="screen" id="screen-diete">
 
+      <!-- RÉSUMÉ DU JOUR -->
       <div class="card">
-        <h3>Suivi du jour</h3>
-        <p class="muted" id="dietDateLabel"></p>
-        <div id="dietChecklist"></div>
-        <div style="margin-top:10px;">
-          <p class="muted" style="margin-bottom:4px;">7 derniers jours</p>
-          <div class="streak" id="dietStreak"></div>
-        </div>
+        <h3>📊 Résumé du jour</h3>
+        <p class="muted" style="font-size:12.5px;margin-bottom:6px;">Calculé automatiquement depuis tes repas enregistrés.</p>
+        <div id="calorieSummary"></div>
       </div>
 
+      <!-- HYDRATATION -->
       <div class="card">
         <div class="row-between">
-          <h3 style="margin:0;">Hydratation</h3>
+          <h3 style="margin:0;">💧 Hydratation</h3>
           <input type="number" id="waterTargetInput" onchange="setWaterTarget()" style="width:70px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-size:12.5px;text-align:center;">
         </div>
         <div id="waterSummary" style="margin-top:6px;"></div>
@@ -495,94 +513,62 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3>Résumé du jour</h3>
-        <p class="muted" style="font-size:12.5px;margin-bottom:6px;">Calculé automatiquement depuis tes repas enregistrés.</p>
-        <div id="calorieSummary"></div>
-      </div>
-
+      <!-- NOTER MON ASSIETTE -->
       <div class="card">
         <div class="row-between">
-          <h3 style="margin:0;">Journal repas</h3>
+          <h3 style="margin:0;">📝 Noter mon assiette</h3>
           <button class="small-btn" onclick="openMealForm()">+ Repas</button>
         </div>
-        <p class="muted" style="font-size:12.5px;">Photo, aliments, macros, ressenti — score et analyse automatique.</p>
+        <p class="muted" style="font-size:12.5px;">Photo, type, aliments et quantités, ressenti — analyse automatique à chaque enregistrement.</p>
         <div id="mealFormCard" style="display:none;margin-top:12px;border:1.5px dashed var(--border);border-radius:16px;padding:14px;"></div>
         <div id="mealJournal" style="margin-top:10px;"></div>
       </div>
 
-      <!-- SCANNER MON ASSIETTE -->
-      <div class="card">
-        <div class="row-between">
-          <h3 style="margin:0;">Analyser mon assiette</h3>
-          <button class="small-btn" onclick="openScanner()">+ Composer</button>
-        </div>
-        <p class="muted">Compose ton assiette aliment par aliment — l'app calcule tes macros et évalue l'équilibre pour ta sèche.</p>
-
-        <div id="scannerFormCard" style="display:none;margin-top:12px;border:1.5px dashed var(--border);border-radius:16px;padding:14px;">
-          <h4 style="margin-bottom:10px;">Composer le repas</h4>
-          <div class="grid2" style="margin-bottom:0;">
-            <div class="field"><label>Aliment</label><select id="scanFoodSelect" onchange="updateScanPreview()"></select></div>
-            <div class="field"><label>Quantité (g)</label><input type="number" id="scanGrams" oninput="updateScanPreview()" placeholder="—"></div>
-          </div>
-          <div id="scanPreview" style="font-size:12.5px;color:var(--muted);margin-bottom:8px;min-height:18px;"></div>
-          <button class="btn outline" onclick="addScanItem()" style="margin-bottom:14px;">Ajouter à l'assiette</button>
-          <div id="scanItemsList"></div>
-          <div id="scanAnalysis" style="display:none;margin-top:12px;"></div>
-          <div style="display:flex;gap:8px;margin-top:14px;">
-            <button class="btn" onclick="saveScanMeal()" style="flex:1;">Enregistrer ce repas</button>
-            <button class="btn outline" onclick="closeScanner()" style="flex:0 0 auto;padding:13px 16px;">✕</button>
-          </div>
-        </div>
-
-        <div id="scanMealLog" style="margin-top:10px;"></div>
+      <!-- SYNTHÈSE DE MON ASSIETTE (automatique — aucune re-saisie) -->
+      <div class="card" id="synthese-card">
+        <h3>🔍 Synthèse de mon assiette</h3>
+        <p class="muted" style="font-size:12.5px;margin-bottom:10px;">Analyse automatique du dernier repas enregistré.</p>
+        <div id="syntheseAssiette"><div class="synthese-empty">Enregistre un repas dans « Noter mon assiette » pour voir la synthèse ici.</div></div>
       </div>
+
+      <!-- SUIVI DU JOUR (checklist comportements) -->
+      <div class="card">
+        <h3>✅ Suivi du jour</h3>
+        <p class="muted" id="dietDateLabel"></p>
+        <div id="dietChecklist"></div>
+        <div style="margin-top:10px;">
+          <p class="muted" style="margin-bottom:4px;font-size:12px;">7 derniers jours</p>
+          <div class="streak" id="dietStreak"></div>
+        </div>
+      </div>
+
+      <!-- Éléments cachés pour la compatibilité avec l'ancien scanner (log uniquement) -->
+      <div id="scanMealLog" style="display:none;"></div>
+      <div id="scannerFormCard" style="display:none;">
+        <select id="scanFoodSelect"></select>
+        <input type="number" id="scanGrams">
+        <div id="scanPreview"></div>
+        <div id="scanItemsList"></div>
+        <div id="scanAnalysis"></div>
+      </div>
+
+    </section>
+
+    <!-- IDÉES REPAS + BON À SAVOIR -->
+    <section class="screen" id="screen-idees">
 
       <!-- IDÉES REPAS -->
       <div class="card" id="idees-repas-card">
         <h3>💡 Idées repas</h3>
-        <p class="muted" style="font-size:12.5px;margin-bottom:10px;">Clique sur une idée pour la pré-remplir dans ton journal repas.</p>
+        <p class="muted" style="font-size:12.5px;margin-bottom:10px;">Clique sur « Utiliser comme modèle » pour pré-remplir « Noter mon assiette ».</p>
         <div id="ideesRepasAccordeons"></div>
       </div>
 
+      <!-- BON À SAVOIR -->
       <div class="card">
-        <h3>Répartition à chaque repas</h3>
-        <ul class="clean">
-          <li>1 portion de protéines</li>
-          <li>1 grosse portion de légumes</li>
-          <li>1 portion de féculents adaptée à l'entraînement</li>
-          <li>1 petite portion de bons lipides</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Protéines — 110 à 130 g / jour</h3>
-        <p class="muted">Œufs, poulet, dinde, jambon blanc de qualité, bœuf maigre, veau, skyr, petits suisses, yaourt grec, whey, tofu, lentilles, pois chiches, haricots rouges.</p>
-        <p class="muted" style="margin-top:6px;"><strong>Pas de poisson ni de fruits de mer</strong> (allergie).</p>
-      </div>
-
-      <div class="card">
-        <h3>Glucides</h3>
-        <p class="muted">Riz basmati, quinoa, patate douce, pommes de terre vapeur, flocons d'avoine, pain complet ou seigle, lentilles, pois chiches, fruits.</p>
-        <p class="muted" style="margin-top:6px;">À placer surtout au petit déjeuner, au déjeuner, et avant/après séance. Le soir, on réduit un peu si la séance est loin, sans supprimer systématiquement.</p>
-      </div>
-
-      <div class="card">
-        <h3>Lipides</h3>
-        <p class="muted">Huile d'olive, huile de colza, avocat, amandes/noix, graines de chia ou de lin, œufs. En petites quantités : c'est calorique.</p>
-      </div>
-
-      <div class="card">
-        <h3>Exemple de journée</h3>
-        <h4>Petit déjeuner</h4>
-        <p class="muted">Option 1 : 2 petits suisses ou skyr, ½ banane ou fruits rouges, 20 à 30 g de flocons d'avoine, 1 dose de whey si besoin, cannelle.</p>
-        <p class="muted">Option 2 : 2 œufs, 1 tranche de jambon, 1 tranche de pain complet, crudités ou fruit.</p>
-        <h4 style="margin-top:10px;">Déjeuner</h4>
-        <p class="muted">Poulet ou dinde, quinoa ou riz, courgettes/concombre/tomates/salade, 1 c. à soupe d'huile d'olive ou colza, yaourt nature ou fruit.</p>
-        <h4 style="margin-top:10px;">Collation pré-sport (2 à 3h avant)</h4>
-        <p class="muted">Petits suisses + whey, ou banane + skyr, ou pain complet + jambon, ou smoothie léger whey + lait végétal + fruits rouges.</p>
-        <h4 style="margin-top:10px;">Dîner</h4>
-        <p class="muted">Protéine maigre (œufs, dinde, tofu, bœuf maigre), légumes cuits ou froids, petite portion de féculent si entraînement intense, dessert léger (fromage blanc, petits suisses, fruit rouge, compote sans sucre).</p>
+        <h3>📚 Bon à savoir</h3>
+        <p class="muted" style="font-size:12.5px;margin-bottom:10px;">Informations nutritionnelles — repliées par défaut, clique pour ouvrir.</p>
+        <div id="bonASavoirAccordeons"></div>
       </div>
 
     </section>
@@ -682,11 +668,15 @@
       Programme
     </button>
     <button class="tab-btn" data-tab="diete" onclick="showTab('diete')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3c-1.5 2-2 4-2 5.5C10 11 11 12 12 12s2-1 2-3.5C14 7 13.5 5 12 3z"/><path d="M5 13c0 5 3 8 7 8s7-3 7-8a7 7 0 00-2-2"/></svg>
-      Diète
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12h6M9 16h4"/></svg>
+      Repas
+    </button>
+    <button class="tab-btn" data-tab="idees" onclick="showTab('idees')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/><path d="M9.5 9.5a4 4 0 015 5" stroke-dasharray="2 2"/></svg>
+      Idées
     </button>
     <button class="tab-btn" data-tab="suivi" onclick="showTab('suivi')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5L18 19v-7"/><path d="M2 19h20"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg>
       Suivi
     </button>
   </nav>
@@ -701,8 +691,8 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-item" onclick="quickAdd('meal')">
-      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
-      Ajouter un repas
+      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12h6M9 16h4"/></svg></div>
+      📝 Noter mon assiette
     </div>
     <div class="sheet-item" onclick="quickAdd('measure')">
       <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V10M11 19V5M18 19v-7"/><path d="M2 19h20"/></svg></div>
@@ -712,9 +702,9 @@
       <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></div>
       Ajouter une activité (vélo, marche...)
     </div>
-    <div class="sheet-item" onclick="quickAdd('scan')">
-      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/><path d="M5.5 5.5l13 13" stroke-width="0"/><circle cx="12" cy="12" r="4" stroke-dasharray="2 2"/></svg></div>
-      Analyser mon assiette
+    <div class="sheet-item" onclick="quickAdd('idees')">
+      <div class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M12 13v8M9 18h6"/></svg></div>
+      💡 Idées repas
     </div>
   </div>
 </div>
@@ -850,7 +840,7 @@ const PHASES = [
   },
   {
     id:2, label:"Phase 2", range:"Semaines 5 à 8",
-    intro:"Progression, tonification visible, hausse de la dépense. Objectif : augmenter progressivement la charge ou les répétitions, sans agresser les articulations. Même structure de semaine, mais on progresse : +1 série sur les exercices principaux, ou +2 répétitions par série, ou +2 à 5 % de charge si le mouvement est propre. Cardio légèrement plus long.",
+    intro:"Progression, tonification visible, hausse de la dépense. Objectif : augmenter progressivement la charge ou les répétitions, sans agresser les articulations. Même structure de semaine, mais on progresse : +1 série sur les exercices principaux, ou +2 repét4itions par série, ou +2 à 5 % de charge si le mouvement est propre. Cardio légèrement plus long.",
     progression:[
       ["Presse à cuisses","passer à 4 séries de 10"],
       ["Hip thrust","4 séries de 10 à 12"],
@@ -1136,11 +1126,13 @@ function openQuickAdd(){ document.getElementById('quickAddSheet').classList.add(
 function closeQuickAdd(){ document.getElementById('quickAddSheet').classList.remove('open'); }
 function quickAdd(type){
   closeQuickAdd();
-  if(type==='food'){ showTab('diete'); openFoodForm(); }
+  if(type==='food'){ showTab('diete'); openMealForm(); }
   if(type==='meal'){ showTab('diete'); openMealForm(); }
   if(type==='measure'){ showTab('suivi'); openMeasureForm(); }
   if(type==='activity'){ showTab('suivi'); openActivityForm(); }
-  if(type==='scan'){ showTab('diete'); openScanner(); }
+  if(type==='idees'){ showTab('idees'); }
+  // Compatibilité : ancien "scan" redirige vers Noter mon assiette
+  if(type==='scan'){ showTab('diete'); openMealForm(); }
 }
 
 /* ============== RENDER : ACCUEIL ============== */
@@ -1377,7 +1369,7 @@ function renderWater(){
 // portion = grammes de la portion par défaut (pour mode 'g')
 const NUTRI_DB = [
   // --- PROTÉINES ---
-  {cat:"Protéines", name:"Poulet (blanc, cuit)", kcal100:165, prot100:31, portion:150,
+  {cat:"Protéines", name:"Poulet (blanc, cuit)", kCal100:165, prot100:31, portion:150,
     units:{"portion":{kcal:248,prot:46},"g":{kcal:1.65,prot:0.31}}},
   {cat:"Protéines", name:"Dinde (cuite)", kcal100:150, prot100:29, portion:150,
     units:{"portion":{kcal:225,prot:44},"g":{kcal:1.5,prot:0.29}}},
@@ -1661,7 +1653,7 @@ function populateScannerSelect(){
   const groups = {};
   FOOD_DB.forEach(f=>{ (groups[f.cat] = groups[f.cat]||[]).push(f); });
   sel.innerHTML = Object.keys(groups).map(cat=>
-    `<optgroup label="${cat}">` + groups[cat].map(f=>`<option value="${f.name}">${f.name}</option>`).oin('') + `</optgroup>`
+    `<optgroup label="${cat}">` + groups[cat].map(f=>`<option value="${f.name}">${f.name}</option>`).join('') + `</optgroup>`
   ).join('');
   updateScanPreview();
 }
@@ -1712,7 +1704,7 @@ function renderScanItems(){
       <div class="scan-item">
         <div>
           <div class="scan-name">${item.food}</div>
-          <div class="scan-meta">${item.grams} g — ${item.kcal} kcall · ${item.protein} g prot.</div>
+          <div class="scan-meta">${item.grams} g — ${item.kcal} kcal · ${item.protein} g prot.</div>
         </div>
         <button class="small-btn" onclick="removeScanItem(${idx})" style="background:var(--coral-light);color:var(--coral);">✕</button>
       </div>`).join('') +
@@ -1774,7 +1766,7 @@ function analyzeMealLocal(items){
       detail: isTrainingDay
         ? (hasCarbs
           ? "Glucides présents — bonne énergie pour la séance."
-          : "Jour d'entraînement : ajoute une source de glucides (riz, quinoa, patate douce...).")
+          : "Jour d'entraînement : ajoute une source de glucides (riz, quinoa, patate douce…).")
         : (hasCarbs
           ? "Jour de repos : tu peux réduire les féculents, surtout le soir."
           : "Bonne gestion des glucides pour un jour de repos."),
@@ -1864,7 +1856,7 @@ function deleteScanMeal(id){
 function renderScanMealLog(){
   const arr = getScannerMeals().slice().reverse();
   const wrap = document.getElementById('scanMealLog');
-  if('wrap') return;
+  if(!wrap) return;
   if(arr.length===0){
     wrap.innerHTML = `<div class="empty">Aucun repas analysé pour l'instant.</div>`;
     return;
@@ -1874,7 +1866,7 @@ function renderScanMealLog(){
     return `<div class="day-card" style="margin-bottom:8px;">
       <div style="padding:10px 12px;">
         <div class="row-between">
-          <span style="font-size:12.5px;font-weight:700;">${m.date} · ${m.tim}</span>
+          <span style="font-size:12.5px;font-weight:700;">${m.date} · ${m.time}</span>
           <span style="font-size:13px;color:${scoreColor};font-weight:800;">${'★'.repeat(m.score)}${'☆'.repeat(4-m.score)} ${m.score}/4</span>
         </div>
         <p class="muted" style="margin-top:3px;font-size:12.5px;">${m.items.map(i=>i.food).join(', ')}</p>
@@ -1916,7 +1908,7 @@ const MEAL_FOOD_GROUPS = [
   {key:'fruits', label:'🍎 Fruits', items:['Fruits rouges','Banane','Pomme','Poire','Kiwi','Orange','Clémentine','Pêche','Abricot','Prune','Raisin','Ananas','Mangue','Compote sans sucres ajoutés']},
   {key:'plaisir', label:'🍕 Repas plaisir / craquage', items:['Pizza','Burger','Frites','Glace','Quiche lorraine','Apéro','Chips','Gâteau','Viennoiserie','Restaurant','Alcool','Autre']},
   {key:'dairy', label:'🧀 Produits laitiers / fromages', items:[
-    'Fêta','Halloumi','Chèvre frais','Chèvre bûche','Fromage râpé','Fromage classique',
+    'Fêta','Halloumi','Chèvre frais','CN[�vre bûche','Fromage râpé','Fromage classique',
     'Mozzarella','Ricotta','Parmesan','Skyr','Fromage blanc','Petits suisses',
     'Yaourt nature','Lait demi-écrémé','Lait entier','Lait écrémé',
     'Lait végétal amande','Lait végétal soja','Lait végétal avoine','Lait végétal coco',
@@ -2297,10 +2289,138 @@ function preparerContexteCoachIA(date){
   };
 }
 
+/**
+ * Synthèse automatique du dernier repas enregistré.
+ * Affiche : score, calories, protéines, catégories, conseil.
+ * S'appuie uniquement sur les données sauvegardées — aucune re-saisie.
+ * @param {number|null} mealId - si fourni, affiche ce repas spécifique
+ */
+function renderSyntheseAssiette(mealId){
+  const el = document.getElementById('syntheseAssiette');
+  if(!el) return;
+
+  const allMeals = getMeals();
+  // Par défaut : dernier repas d'aujourd'hui, sinon dernier repas toutes dates
+  let meal = null;
+  if(mealId){
+    meal = allMeals.find(m=>m.id===mealId);
+  } else {
+    const todayMeals = allMeals.filter(m=>m.date===todayISO()).slice().reverse();
+    meal = todayMeals[0] || allMeals.slice().reverse()[0] || null;
+  }
+
+  if(!meal){
+    el.innerHTML = `<div class="synthese-empty">Enregistre un repas dans « 📝 Noter mon assiette » pour voir la synthèse ici.</div>`;
+    return;
+  }
+
+  // Titre du type de repas
+  const typeLabels = {petitdej:'☀️ Petit-déjeuner',dejeuner:'🥗 Déjeuner',collation:'🍎 Collation',diner:'🌙 Dîner',plaisir:'🍕 Repas plaisir'};
+  const typeLbl = meal.type ? (typeLabels[meal.type]||meal.type) : 'Repas';
+
+  // Score et couleur
+  const score = meal.score !== undefined ? meal.score : 0;
+  const col = score>=7?'var(--accent)':score>=4?'#e8a000':'var(--coral)';
+
+  // Catégories présentes (depuis chips ou aliments)
+  const hasProteins = (meal.proteins||[]).length>0 || ((meal.dairy||[]).some(d=>DAIRY_PROTEIN_ITEMS.includes(d)));
+  const hasLegumes  = (meal.legumes||[]).length>0;
+  const hasFeculents= (meal.feculents||[]).length>0;
+  const hasLipides  = (meal.lipides||[]).length>0;
+  const hasFruits   = (meal.fruits||[]).length>0;
+  const hasPlaisir  = (meal.plaisir||[]).length>0;
+  const hasDairy    = (meal.dairy||[]).length>0;
+  const hasRichCheese = (meal.dairy||[]).some(d=>DAIRY_RICH_ITEMS.includes(d));
+
+  // Étiquette d'équilibre
+  let etiquette, etiquetteCss;
+  if(hasPlaisir || meal.type==='plaisir' || (meal.deviation&&meal.deviation!=='aucun')){
+    etiquette='Repas plaisir 🍕'; etiquetteCss='background:var(--coral-light);color:var(--coral);';
+  } else if(score>=8){
+    etiquette='Repas équilibré ✓'; etiquetteCss='background:var(--mint-light);color:var(--accent);';
+  } else if(score>=5){
+    etiquette='Repas correct à améliorer'; etiquetteCss='background:#fff8e1;color:#c47a00;';
+  } else {
+    etiquette='Repas incomplet'; etiquetteCss='background:var(--coral-light);color:var(--coral);';
+  }
+
+  // Pilules de catégories
+  const cats = [
+    {ok:hasProteins, label:'Protéines'},
+    {ok:hasLegumes, label:'Légumes'},
+    {ok:hasFeculents, label:'Féculents'},
+    {ok:hasLipides, label:'Lipides'},
+    {ok:hasFruits, label:'Fruits'},
+    {ok:hasDairy, label:'Laitiers / fromages', neutral:true},
+    {ok:hasPlaisir, label:'Repas plaisir', neutral:true},
+  ].filter(c=>c.ok);
+
+  // Barre de score
+  const bars = Array.from({length:10},(_,i)=>
+    `<div style="flex:1;height:6px;border-radius:3px;background:${i<score?col:'var(--border)'};"></div>`
+  ).join('');
+
+  // Conseils bienveillants complémentaires
+  const conseilParts = [];
+  if(hasPlaisir || meal.type==='plaisir'){
+    const pizzaPresent = (meal.plaisir||[]).some(p=>p.toLowerCase().includes('pizza'));
+    if(pizzaPresent) conseilParts.push('Pizza enregistrée : repas riche, à rééquilibrer ensuite avec protéines, légumes et hydratation.');
+    else conseilParts.push('Repas plaisir enregistré. Ce n\'est pas grave : l\'important est la tendance sur la semaine.');
+  } else {
+    if(!hasProteins) conseilParts.push('Ajoute une source de protéines au prochain repas pour préserver ta masse musculaire.');
+    if(!hasLegumes)  conseilParts.push('Pense aux légumes — fibres, volume et satiété.');
+    if(hasRichCheese) conseilParts.push('Fromage ajouté : bon pour la satiété, surveille la portion dans un objectif sèche.');
+    if(hasProteins && hasLegumes && score>=7) conseilParts.push('Excellent repas — bonne base pour ta sèche !');
+    else if(hasProteins && hasLegumes) conseilParts.push('Repas correct, tu peux encore l\'optimiser selon les conseils ci-dessus.');
+  }
+  const conseil = conseilParts.join(' ') || (meal.analysis||'Repas enregistré.');
+
+  // Aliments listés (depuis aliments[] ou chips)
+  const alimentsList = (meal.aliments||[]).slice(0,6).map(a=>{
+    let s = `${a.quantite} ${a.unite} ${a.nom}`;
+    if(a.precision) s += ` (${a.precision})`;
+    return `<span style="font-size:11.5px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:3px 8px;border-radius:999px;margin-right:3px;margin-bottom:3px;display:inline-block;">${s}</span>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="synthese-result">
+      <div class="row-between" style="margin-bottom:10px;align-items:flex-start;">
+        <div>
+          <div style="font-weight:700;font-size:14px;">${typeLbl}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${meal.date} · ${meal.time||''}</div>
+          <div style="margin-top:6px;display:inline-block;padding:4px 10px;border-radius:999px;font-size:12.5px;font-weight:700;${etiquetteCss}">${etiquette}</div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto;">
+          <div style="font-size:22px;font-weight:800;color:${col};">${score}<span style="font-size:11px;color:var(--muted);font-weight:500;">/10</span></div>
+          <div style="font-size:10px;color:var(--muted);">score repas</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:10px;">${bars}</div>
+      ${(meal.totalKcal>0||meal.totalProt>0)?`
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <div style="flex:1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 10px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--accent);">${meal.totalKcal||0}</div>
+            <div style="font-size:10.5px;color:var(--muted);">kcal</div>
+          </div>
+          <div style="flex:1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 10px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--accent);">${meal.totalProt||0}</div>
+            <div style="font-size:10.5px;color:var(--muted);">g prot.</div>
+          </div>
+        </div>`:''}
+      ${alimentsList?`<div style="margin-bottom:8px;">${alimentsList}</div>`:''}
+      ${cats.length?`<div style="margin-bottom:8px;">${cats.map(c=>`<span class="synthese-pill ${c.neutral?'neutral':'ok'}">${c.label}</span>`).join('')}</div>`:''}
+      <div style="background:${score>=7?'var(--mint-light)':'var(--coral-light)'};border-radius:10px;padding:10px 12px;font-size:12.5px;color:${score>=7?'var(--accent-dark)':'#8a3c25'};">
+        💬 ${conseil}
+      </div>
+    </div>
+  `;
+}
+
 /** Wrapper : met à jour tous les affichages de l'interface */
 function mettreAJourInterface(){
   renderMealJournal();
   recalculerSuiviDuJour(todayISO());
+  renderSyntheseAssiette(); // ← mise à jour automatique après chaque enregistrement
 }
 
 function handleMealPhoto(evt){
@@ -2745,7 +2865,7 @@ const IDEES_REPAS = [
     ]
   },
   {
-    cat:"🍕 Repas plaisir mieux maítrisé", items:[
+    cat:"🍕 Repas plaisir mieux maîtrisé", items:[
       {nom:"Pizza + salade verte", detail:"1-2 parts pizza + grande salade", macros:"~600 kcal · 23g prot.",
         aliments:[{nom:"Pizza (part)",q:1,u:"part"},{nom:"Salade verte",q:1,u:"bol"},{nom:"Huile d'olive ou colza",q:1,u:"c. à soupe"}]},
       {nom:"Burger + légumes crus", detail:"1 burger + crudités à la place des frites", macros:"~620 kcal · 30g prot.",
@@ -2792,20 +2912,127 @@ function renderIdeesRepas(){
   `).join('');
 }
 
+/**
+ * Pré-remplit "Noter mon assiette" depuis une idée repas.
+ * Navigue vers l'onglet Repas et ouvre le formulaire avec les aliments préremplis.
+ */
 function utiliserIdeeRepas(catIdx, itemIdx){
   const idee = IDEES_REPAS[catIdx].items[itemIdx];
-  // Pré-remplir le formulaire repas
+  // Naviguer vers l'onglet Repas et ouvrir le formulaire
   showTab('diete');
   openMealForm();
-  // Charger les aliments dans le formulaire
+  // Charger les aliments de l'idée dans le formulaire (modifiables avant enregistrement)
   idee.aliments.forEach(a=>{
     const macros = computeItemMacros(a.nom, a.q, a.u);
-    currentMealItems.push({nom:a.nom, quantite:a.q, unite:a.u, precision:a.p||'', kcal:macros.kcal, prot:macros.prot, libre:false});
+    currentMealItems.push({
+      nom: a.nom,
+      quantite: a.q,
+      unite: a.u,
+      precision: a.p || '',
+      kcal: macros.kcal,
+      prot: macros.prot,
+      libre: false
+    });
   });
   renderMealItemsList();
   updateMealScore();
   // Scroller vers le formulaire
-  setTimeout(()=>{ const el=document.getElementById('mealFormCard'); if(el) el.scrollIntoView({behavior:'smooth'}); },200);
+  setTimeout(()=>{ const el=document.getElementById('mealFormCard'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 250);
+}
+
+/* ============== BON À SAVOIR (accordéons nutritionnels) ============== */
+
+const BON_A_SAVOIR = [
+  {
+    id:'assiette', title:'🥗 Composer une assiette équilibrée',
+    content:`
+      <p>À chaque repas principal, vise cette répartition :</p>
+      <ul class="clean">
+        <li><strong>1 portion de protéines</strong> — pour préserver la masse musculaire</li>
+        <li><strong>1 grosse portion de légumes</strong> — fibres, satiété, vitamines</li>
+        <li><strong>1 portion de féculents</strong> — à ajuster selon l'entraînement</li>
+        <li><strong>1 petite portion de bons lipides</strong> — huile, avocat, oléagineux</li>
+      </ul>`
+  },
+  {
+    id:'proteines', title:'🥩 Protéines — objectif 110 à 130 g / jour',
+    content:`
+      <p>Sources recommandées : œufs, poulet, dinde, jambon blanc de qualité, bœuf maigre, veau, skyr, petits suisses, yaourt grec, whey, tofu, lentilles, pois chiches, haricots rouges.</p>
+      <p style="margin-top:8px;"><strong>⚠️ Pas de poisson ni de fruits de mer (allergie).</strong></p>
+      <p style="margin-top:8px;" class="muted">Répartis les protéines sur 3 à 4 repas pour une meilleure assimilation.</p>`
+  },
+  {
+    id:'glucides', title:'🌾 Glucides — quand les placer',
+    content:`
+      <p>Riz basmati, quinoa, patate douce, pommes de terre vapeur, flocons d'avoine, pain complet ou seigle, lentilles, pois chiches, fruits.</p>
+      <ul class="clean" style="margin-top:8px;">
+        <li>✅ <strong>Petit-déjeuner</strong> : oui, bonne énergie pour la matinée</li>
+        <li>✅ <strong>Avant sport</strong> : oui (2-3h avant)</li>
+        <li>✅ <strong>Après sport</strong> : oui, favorise la récupération</li>
+        <li>⚡ <strong>Soir sans sport</strong> : réduire un peu, sans supprimer</li>
+      </ul>`
+  },
+  {
+    id:'lipides', title:'🥑 Lipides — bonnes sources et portions',
+    content:`
+      <p>Huile d'olive, huile de colza, avocat, amandes/noix, graines de chia ou de lin, œufs.</p>
+      <p style="margin-top:8px;"><strong>En petites quantités</strong> : les lipides sont caloriques (1g = 9 kcal). Une cuillère à soupe d'huile = ~80 kcal.</p>
+      <p style="margin-top:8px;" class="muted">Ils restent essentiels pour les hormones, les articulations et l'absorption des vitamines.</p>`
+  },
+  {
+    id:'laitiers', title:'🧀 Produits laitiers et fromages',
+    content:`
+      <p><strong>Sources riches en protéines :</strong> skyr, fromage blanc 0%, petits suisses, yaourt grec — excellents pour la sèche.</p>
+      <p style="margin-top:8px;"><strong>Fromages :</strong> fêta, halloumi, mozzarella, chèvre, parmesan… Bons pour le goût et la satiété, mais riches en lipides. Surveille la portion.</p>
+      <p style="margin-top:8px;" class="muted">Laits végétaux : le lait de soja est le plus riche en protéines. Amande, avoine et coco apportent peu de protéines.</p>`
+  },
+  {
+    id:'plaisir', title:'🍕 Repas plaisir / craquage',
+    content:`
+      <p>Un repas plaisir par semaine ne compromet pas tes résultats. <strong>L'important c'est la tendance sur la semaine, pas le repas isolé.</strong></p>
+      <ul class="clean" style="margin-top:8px;">
+        <li>Pizza → accompagne d'une salade verte</li>
+        <li>Burger → prends des crudités à la place des frites</li>
+        <li>Glace → contrôle la portion, pas de culpabilité</li>
+        <li>Restaurant → choisis une entrée légère, protéine + légumes en plat</li>
+      </ul>
+      <p style="margin-top:8px;" class="muted">Après un repas plaisir : bonne hydratation et repas suivant équilibré. Pas de compensations extrêmes.</p>`
+  },
+  {
+    id:'sport', title:'⚡ Avant / après sport',
+    content:`
+      <p><strong>Avant sport (2 à 3h avant) :</strong></p>
+      <ul class="clean">
+        <li>Skyr + whey + banane</li>
+        <li>Pain complet + jambon + fromage blanc</li>
+        <li>Flocons d'avoine + petits suisses</li>
+      </ul>
+      <p style="margin-top:8px;"><strong>Après sport (dès que possible) :</strong></p>
+      <ul class="clean">
+        <li>Poulet + riz + légumes</li>
+        <li>Skyr + whey + fruits rouges</li>
+        <li>Œufs + pommes de terre + salade</li>
+      </ul>
+      <p style="margin-top:8px;" class="muted">Bien s'hydrater avant, pendant et après la séance.</p>`
+  },
+];
+
+/**
+ * Affiche les accordéons "Bon à savoir" dans screen-idees.
+ * Repliés par défaut, chaque section s'ouvre au clic.
+ */
+function renderBonASavoir(){
+  const wrap = document.getElementById('bonASavoirAccordeons');
+  if(!wrap) return;
+  wrap.innerHTML = BON_A_SAVOIR.map(item=>`
+    <div class="bsa-item" id="bsa-${item.id}">
+      <div class="bsa-head" onclick="document.getElementById('bsa-${item.id}').classList.toggle('open')">
+        <span>${item.title}</span>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="bsa-body">${item.content}</div>
+    </div>
+  `).join('');
 }
 
 /* ============== INIT ============== */
@@ -2816,13 +3043,15 @@ function refreshAll(){
   renderProgramme();
   renderDiet();
   renderWater();
-  renderCalories();
-  renderMealJournal();
-  renderIdeesRepas();
+  renderCalories();           // → recalculerSuiviDuJour (Résumé du jour)
+  renderMealJournal();        // → Journal dans "Noter mon assiette"
+  renderSyntheseAssiette();   // → Synthèse auto du dernier repas
+  renderIdeesRepas();         // → Idées repas
+  renderBonASavoir();         // → Bon à savoir accordéons
   renderMeasures();
   renderBurned();
   renderRecovery();
-  renderScanMealLog();
+  // renderScanMealLog() n'affiche plus rien (éléments cachés), on le laisse pour compat
   document.getElementById('startDateInput').value = getStartDate();
   document.getElementById('calorieTargetInput').value = getCalorieTarget();
   const warn = document.getElementById('calorieWarning');
